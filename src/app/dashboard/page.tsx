@@ -147,7 +147,7 @@ export default function DashboardPage() {
           ) : (
             <div className="divide-y divide-slate-100">
               {rides.map((ride) => (
-                <div key={id => ride.id} className="py-3 flex items-center justify-between text-sm">
+                <div key={ride.id} className="py-3 flex items-center justify-between text-sm">
                   <div>
                     <p className="font-medium text-slate-800">{ride.name || '无标题骑行'}</p>
                     <p className="text-xs text-slate-400 mt-0.5">
