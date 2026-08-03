@@ -1,0 +1,168 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { supabase } from '../../lib/supabase'
+
+export default function DashboardPage() {
+  const [user, setUser] = useState<any>(null)
+  const [isConnected, setIsConnected] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [rides, setRides] = useState<any[]>([])
+  const [syncMsg, setSyncMsg] = useState('')
+
+  useEffect(() => {
+    async function init() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        setUser(user)
+        checkExistingConnection(user.id)
+        fetchRides(user.id)
+      }
+    }
+    init()
+  }, [])
+
+  async function checkExistingConnection(userId: string) {
+    const { data } = await supabase
+      .from('strava_connections')
+      .select('id')
+      .eq('user_id', userId)
+      .single()
+    
+    if (data) setIsConnected(true)
+  }
+
+  // 从数据库获取骑行列表
+  async function fetchRides(userId: string) {
+    const { data } = await supabase
+      .from('rides')
+      .select('*')
+      .eq('user_id', userId)
+      .order('start_date', { ascending: false })
+
+    if (data) setRides(data)
+  }
+
+  async function handleSync() {
+    if (!user) return
+    setIsSyncing(true)
+    setSyncMsg('正在从 Strava 同步骑行数据...')
+
+    try {
+      const res = await fetch('/api/strava/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id })
+      })
+      const result = await res.json()
+
+      if (result.success) {
+        setSyncMsg(`成功同步 ${result.count} 条记录！`)
+        fetchRides(user.id)
+      } else {
+        setSyncMsg('同步失败：' + (result.error || '未知错误'))
+      }
+    } catch (err) {
+      setSyncMsg('同步请求发起失败')
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
+  const clientId = '269704'
+  const redirectUri = 'http://localhost:3000/api/strava/callback'
+  const stravaAuthUrl = `https://www.strava.com/oauth/mobile/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&approval_prompt=auto&scope=activity:read_all`
+
+  // 计算总里程（米转公里）和预估节省的 TfL 交通费（假设每次通勤省 £7.60，或者根据里程粗算）
+  const totalDistanceKm = (rides.reduce((acc, r) => acc + (r.distance || 0), 0) / 1000).toFixed(1)
+  const estimatedSavings = (rides.length * 3.90).toFixed(2) // 按照每趟 £3.90 折算 TfL 费用
+
+  return (
+    <main className="min-h-screen bg-slate-50 p-8">
+      <div className="max-w-3xl mx-auto mt-8 space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-800 tracking-tight mb-2">
+            CycleWorth 个人财务仪表盘
+          </h1>
+          <p className="text-slate-500">
+            当前登录: {user?.email || '加载中...'}
+          </p>
+        </div>
+
+        {/* 核心财务与数据统计卡片 (Apple 风格) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+            <p className="text-sm font-medium text-slate-400">总骑行次数</p>
+            <p className="text-3xl font-bold text-slate-800 mt-2">{rides.length} <span className="text-sm font-normal text-slate-500">次</span></p>
+          </div>
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+            <p className="text-sm font-medium text-slate-400">总骑行距离</p>
+            <p className="text-3xl font-bold text-slate-800 mt-2">{totalDistanceKm} <span className="text-sm font-normal text-slate-500">km</span></p>
+          </div>
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 bg-gradient-to-br from-sky-50 to-white">
+            <p className="text-sm font-medium text-sky-600">已节省交通开支 (TfL)</p>
+            <p className="text-3xl font-bold text-sky-700 mt-2">£{estimatedSavings}</p>
+          </div>
+        </div>
+
+        {/* 数据源控制台 */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-800">Strava 数据同步</h2>
+            <p className="text-sm text-slate-500 mt-1">点击同步以获取最新的云端骑行记录。</p>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            {isConnected ? (
+              <span className="px-4 py-2 bg-green-50 text-green-700 font-medium text-sm rounded-xl border border-green-200">
+                ✓ 已连接
+              </span>
+            ) : (
+              <a href={stravaAuthUrl} className="px-5 py-2 bg-[#FC4C02] text-white text-sm font-medium rounded-xl hover:bg-[#E34402]">
+                连接 Strava
+              </a>
+            )}
+            <button
+              onClick={handleSync}
+              disabled={isSyncing}
+              className="px-5 py-2 bg-sky-600 text-white text-sm font-medium rounded-xl hover:bg-sky-700 disabled:opacity-50"
+            >
+              {isSyncing ? '同步中...' : '同步记录'}
+            </button>
+          </div>
+        </div>
+
+        {syncMsg && (
+          <p className="text-sm text-sky-600 bg-sky-50 p-3 rounded-xl border border-sky-100">
+            {syncMsg}
+          </p>
+        )}
+
+        {/* 骑行记录明细表 */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
+          <h2 className="text-lg font-semibold text-slate-800">近期骑行明细</h2>
+          
+          {rides.length === 0 ? (
+            <p className="text-sm text-slate-400 py-4 text-center">暂无骑行记录，请先点击上方“同步记录”。</p>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {rides.map((ride) => (
+                <div key={id => ride.id} className="py-3 flex items-center justify-between text-sm">
+                  <div>
+                    <p className="font-medium text-slate-800">{ride.name || '无标题骑行'}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {new Date(ride.start_date).toLocaleDateString()} · {Math.round(ride.moving_time / 60)} 分钟
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-semibold text-slate-700">{(ride.distance / 1000).toFixed(2)} km</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </main>
+  )
+}
