@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation' // 新增路由功能
+import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 
 export default function DashboardPage() {
@@ -17,60 +17,28 @@ export default function DashboardPage() {
       const { data: { user } } = await supabase.auth.getUser()
       
       if (!user) {
-        // 核心修复 1：如果没登录，直接打回登录页
         router.push('/login')
         return
       }
       
       setUser(user)
-
-      // 核心修复 2：检查网址里是否有 Strava 带回来的授权码 code
-      const urlParams = new URLSearchParams(window.location.search)
-      const code = urlParams.get('code')
-      
-      if (code) {
-        await handleExchangeCode(code, user.id)
-      } else {
-        checkExistingConnection(user.id)
-        fetchRides(user.id)
-      }
+      // 直接检查数据库连接和获取历史骑行
+      await checkExistingConnection(user.id)
+      await fetchRides(user.id)
     }
     init()
   }, [router])
-
-  // 新增：自动用 code 换取真正 token 的逻辑
-  async function handleExchangeCode(code: string, userId: string) {
-    setSyncMsg('正在处理 Strava 授权...')
-    try {
-      // 这里调用了你写好的 exchange 接口
-      const res = await fetch('/api/strava/exchange', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, userId })
-      })
-      
-      if (res.ok) {
-        setIsConnected(true)
-        setSyncMsg('✓ Strava 连接成功！')
-        // 清理掉网址上的 code，防止刷新页面时重复请求
-        window.history.replaceState({}, document.title, '/dashboard')
-        fetchRides(userId)
-      } else {
-        setSyncMsg('授权处理失败，请重试')
-      }
-    } catch (error) {
-      setSyncMsg('请求异常，请检查网络')
-    }
-  }
 
   async function checkExistingConnection(userId: string) {
     const { data } = await supabase
       .from('strava_connections')
       .select('id')
       .eq('user_id', userId)
-      .single()
+      .maybeSingle()
     
-    if (data) setIsConnected(true)
+    if (data) {
+      setIsConnected(true)
+    }
   }
 
   async function fetchRides(userId: string) {
@@ -80,7 +48,9 @@ export default function DashboardPage() {
       .eq('user_id', userId)
       .order('start_date', { ascending: false })
 
-    if (data) setRides(data)
+    if (data) {
+      setRides(data)
+    }
   }
 
   async function handleSync() {
@@ -112,7 +82,6 @@ export default function DashboardPage() {
   const DOMAIN = "https://cycleworth.vercel.app"
   const clientId = process.env.NEXT_PUBLIC_STRAVA_CLIENT_ID
   const redirectUri = `${DOMAIN}/api/strava/callback`
-  // 核心修复 3：去掉了 /mobile，变回最稳定的标准网页端授权
   const stravaAuthUrl = `https://www.strava.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&approval_prompt=auto&scope=activity:read_all`
 
   const totalDistanceKm = (rides.reduce((acc, r) => acc + (r.distance || 0), 0) / 1000).toFixed(1)
@@ -163,7 +132,7 @@ export default function DashboardPage() {
             )}
             <button
               onClick={handleSync}
-              disabled={isSyncing || !isConnected} // 没连接时也不允许瞎点同步
+              disabled={isSyncing}
               className="px-5 py-2 bg-sky-600 text-white text-sm font-medium rounded-xl hover:bg-sky-700 disabled:opacity-50"
             >
               {isSyncing ? '同步中...' : '同步记录'}
