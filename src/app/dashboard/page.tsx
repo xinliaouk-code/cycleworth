@@ -6,7 +6,10 @@ import dynamic from 'next/dynamic'
 import { supabase } from '../../lib/supabase'
 
 // 动态引入地图组件，彻底规避 SSR window is not defined 报错
-const RouteMapPreview = dynamic(() => import('../../components/RouteMapPreview'), { ssr: false })
+const RouteMapPreview = dynamic<{ polyline: string }>(
+  () => import('../../components/RouteMapPreview'), 
+  { ssr: false }
+)
 
 export default function DashboardPage() {
   const router = useRouter()
