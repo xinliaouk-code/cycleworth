@@ -31,7 +31,12 @@ export default function DashboardPage() {
   const [rides, setRides] = useState<Ride[]>([])
   const [syncMsg, setSyncMsg] = useState('')
   
-  // 统一的点击弹窗状态（电脑端与手机端通用）
+  // 模块折叠状态管理 (false 表示展开，true 表示收起)
+  const [collapseSync, setCollapseSync] = useState(false)
+  const [collapseChart, setCollapseChart] = useState(false)
+  const [collapseRides, setCollapseRides] = useState(false)
+
+  // 统一的点击弹窗状态
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null)
 
   useEffect(() => {
@@ -156,7 +161,7 @@ export default function DashboardPage() {
   const commuteRidesCount = rides.filter(r => r.is_commute).length
   const estimatedSavings = (commuteRidesCount * 3.90).toFixed(2)
 
-  // 辅助函数：根据日期获取当周周一的日期作为 Key
+  // 按周聚合数据用于图表
   function getWeekKey(dateStr: string) {
     const d = new Date(dateStr)
     const day = d.getDay()
@@ -165,7 +170,6 @@ export default function DashboardPage() {
     return monday.toISOString().substring(0, 10)
   }
 
-  // 按周聚合数据用于图表
   const weeklyMap = new Map<string, { distance: number; savings: number; count: number }>()
   rides.forEach(r => {
     if (!r.start_date) return
@@ -218,30 +222,44 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-800">Strava 数据同步</h2>
-            <p className="text-sm text-slate-500 mt-1">点击同步以获取最新的云端骑行记录并自动识别通勤。</p>
-          </div>
-          
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            {isConnected ? (
-              <span className="flex-1 md:flex-none text-center px-4 py-2.5 bg-green-50 text-green-700 font-medium text-sm rounded-xl border border-green-200">
-                ✓ 已连接
-              </span>
-            ) : (
-              <a href={stravaAuthUrl} className="flex-1 md:flex-none text-center px-5 py-2.5 bg-[#FC4C02] text-white text-sm font-medium rounded-xl hover:bg-[#E34402]">
-                连接 Strava
-              </a>
+        {/* 1. Strava 数据同步模块 */}
+        <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4 transition-all">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <button 
+                onClick={() => setCollapseSync(!collapseSync)}
+                className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold flex items-center justify-center text-xs transition cursor-pointer"
+                title={collapseSync ? "展开模块" : "收起模块"}
+              >
+                {collapseSync ? '+' : '−'}
+              </button>
+              <h2 className="text-lg font-semibold text-slate-800">Strava 数据同步</h2>
+            </div>
+            {!collapseSync && (
+              <div className="flex items-center gap-3">
+                {isConnected ? (
+                  <span className="text-center px-4 py-2 bg-green-50 text-green-700 font-medium text-xs rounded-xl border border-green-200">
+                    ✓ 已连接
+                  </span>
+                ) : (
+                  <a href={stravaAuthUrl} className="text-center px-4 py-2 bg-[#FC4C02] text-white text-xs font-medium rounded-xl hover:bg-[#E34402]">
+                    连接 Strava
+                  </a>
+                )}
+                <button
+                  onClick={handleSync}
+                  disabled={isSyncing}
+                  className="text-center px-4 py-2 bg-sky-600 text-white text-xs font-medium rounded-xl hover:bg-sky-700 disabled:opacity-50 cursor-pointer"
+                >
+                  {isSyncing ? '同步中...' : '同步记录'}
+                </button>
+              </div>
             )}
-            <button
-              onClick={handleSync}
-              disabled={isSyncing}
-              className="flex-1 md:flex-none text-center px-5 py-2.5 bg-sky-600 text-white text-sm font-medium rounded-xl hover:bg-sky-700 disabled:opacity-50"
-            >
-              {isSyncing ? '同步中...' : '同步记录'}
-            </button>
           </div>
+
+          {!collapseSync && (
+            <p className="text-sm text-slate-500">点击同步以获取最新的云端骑行记录并自动识别通勤。</p>
+          )}
         </div>
 
         {syncMsg && (
@@ -251,124 +269,151 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* 周度里程与节省金额双指标趋势图 */}
+        {/* 2. 周度里程与节省金额双指标趋势图模块 */}
         {chartData.length > 0 && (
-          <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
+          <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4 transition-all">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-800">周度骑行里程与节省开支趋势</h2>
-                <p className="text-sm text-slate-400 mt-0.5">对比每周的总骑行距离 (km) 与 TfL 节省金额 (£)</p>
+              <div className="flex items-center gap-2.5">
+                <button 
+                  onClick={() => setCollapseChart(!collapseChart)}
+                  className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold flex items-center justify-center text-xs transition cursor-pointer"
+                  title={collapseChart ? "展开模块" : "收起模块"}
+                >
+                  {collapseChart ? '+' : '−'}
+                </button>
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-800">周度骑行里程与节省开支趋势</h2>
+                  {!collapseChart && <p className="text-sm text-slate-400 mt-0.5">对比每周的总骑行距离 (km) 与 TfL 节省金额 (£)</p>}
+                </div>
               </div>
-              <div className="flex items-center gap-4 text-xs font-medium">
-                <span className="flex items-center gap-1.5 text-sky-600">
-                  <span className="w-3 h-3 rounded-full bg-sky-500 inline-block"></span> 骑行里程 (km)
-                </span>
-                <span className="flex items-center gap-1.5 text-emerald-600">
-                  <span className="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span> 节省开支 (£)
-                </span>
-              </div>
+              {!collapseChart && (
+                <div className="flex items-center gap-4 text-xs font-medium">
+                  <span className="flex items-center gap-1.5 text-sky-600">
+                    <span className="w-3 h-3 rounded-full bg-sky-500 inline-block"></span> 骑行里程 (km)
+                  </span>
+                  <span className="flex items-center gap-1.5 text-emerald-600">
+                    <span className="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span> 节省开支 (£)
+                  </span>
+                </div>
+              )}
             </div>
 
-            <div className="w-full h-72 pt-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis 
-                    dataKey="shortWeek" 
-                    tickLine={false} 
-                    axisLine={{ stroke: '#cbd5e1' }} 
-                    tick={{ fill: '#64748b', fontSize: 11 }} 
-                  />
-                  <YAxis 
-                    yAxisId="left"
-                    orientation="left"
-                    tickLine={false} 
-                    axisLine={false} 
-                    tick={{ fill: '#0284c7', fontSize: 12 }} 
-                  />
-                  <YAxis 
-                    yAxisId="right"
-                    orientation="right"
-                    tickLine={false} 
-                    axisLine={false} 
-                    tick={{ fill: '#059669', fontSize: 12 }} 
-                  />
-                  <Tooltip 
-                    cursor={{ fill: '#f8fafc' }}
-                    contentStyle={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                    formatter={(value: any, name: any): [string, string] => [
-                      name === 'distance' ? `${value} km` : `£${value}`,
-                      name === 'distance' ? '骑行里程' : '节省开支'
-                    ]}
-                    labelStyle={{ fontWeight: 'bold', color: '#1e293b' }}
-                  />
-                  <Bar yAxisId="left" dataKey="distance" name="distance" fill="#0284c7" radius={[4, 4, 0, 0]} barSize={14} />
-                  <Bar yAxisId="right" dataKey="savings" name="savings" fill="#10b981" radius={[4, 4, 0, 0]} barSize={14} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            {!collapseChart && (
+              <div className="w-full h-72 pt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis 
+                      dataKey="shortWeek" 
+                      tickLine={false} 
+                      axisLine={{ stroke: '#cbd5e1' }} 
+                      tick={{ fill: '#64748b', fontSize: 11 }} 
+                    />
+                    <YAxis 
+                      yAxisId="left"
+                      orientation="left"
+                      tickLine={false} 
+                      axisLine={false} 
+                      tick={{ fill: '#0284c7', fontSize: 12 }} 
+                    />
+                    <YAxis 
+                      yAxisId="right"
+                      orientation="right"
+                      tickLine={false} 
+                      axisLine={false} 
+                      tick={{ fill: '#059669', fontSize: 12 }} 
+                    />
+                    <Tooltip 
+                      cursor={{ fill: '#f8fafc' }}
+                      contentStyle={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                      formatter={(value: any, name: any): [string, string] => [
+                        name === 'distance' ? `${value} km` : `£${value}`,
+                        name === 'distance' ? '骑行里程' : '节省开支'
+                      ]}
+                      labelStyle={{ fontWeight: 'bold', color: '#1e293b' }}
+                    />
+                    <Bar yAxisId="left" dataKey="distance" name="distance" fill="#0284c7" radius={[4, 4, 0, 0]} barSize={14} />
+                    <Bar yAxisId="right" dataKey="savings" name="savings" fill="#10b981" radius={[4, 4, 0, 0]} barSize={14} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </div>
         )}
 
-        <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
-          <h2 className="text-lg font-semibold text-slate-800">近期骑行明细</h2>
+        {/* 3. 近期骑行明细列表模块 */}
+        <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4 transition-all">
+          <div className="flex items-center gap-2.5">
+            <button 
+              onClick={() => setCollapseRides(!collapseRides)}
+              className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold flex items-center justify-center text-xs transition cursor-pointer"
+              title={collapseRides ? "展开模块" : "收起模块"}
+            >
+              {collapseRides ? '+' : '−'}
+            </button>
+            <h2 className="text-lg font-semibold text-slate-800">近期骑行明细</h2>
+          </div>
           
-          {rides.length === 0 ? (
-            <p className="text-sm text-slate-400 py-4 text-center">暂无骑行记录，请先点击上方“同步记录”。</p>
-          ) : (
-            <div className="divide-y divide-slate-100">
-              {rides.map((ride) => (
-                <div 
-                  key={ride.id} 
-                  className="py-4 flex flex-col md:flex-row md:items-center justify-between text-sm gap-4 hover:bg-slate-50/80 px-2 md:px-3 rounded-xl transition cursor-pointer"
-                  onClick={() => setSelectedRide(ride)}
-                >
-                  <div className="w-full md:w-1/3 flex items-start justify-between md:justify-start gap-2">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-slate-800 truncate max-w-[140px] md:max-w-[200px]">{ride.name || '无标题骑行'}</p>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleToggleCommute(ride.id, ride.is_commute)
-                          }}
-                          title="点击切换 通勤 / 休闲"
-                          className={`px-2 py-0.5 rounded-md text-[10px] font-medium shrink-0 transition cursor-pointer border ${
-                            ride.is_commute 
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' 
-                              : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
-                          }`}
-                        >
-                          {ride.is_commute ? '上班通勤' : '休闲骑行'}
-                        </button>
+          {!collapseRides && (
+            <div>
+              {rides.length === 0 ? (
+                <p className="text-sm text-slate-400 py-4 text-center">暂无骑行记录，请先点击上方“同步记录”。</p>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {rides.map((ride) => (
+                    <div 
+                      key={ride.id} 
+                      className="py-4 flex flex-col md:flex-row md:items-center justify-between text-sm gap-4 hover:bg-slate-50/80 px-2 md:px-3 rounded-xl transition cursor-pointer"
+                      onClick={() => setSelectedRide(ride)}
+                    >
+                      <div className="w-full md:w-1/3 flex items-start justify-between md:justify-start gap-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-slate-800 truncate max-w-[140px] md:max-w-[200px]">{ride.name || '无标题骑行'}</p>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleToggleCommute(ride.id, ride.is_commute)
+                              }}
+                              title="点击切换 通勤 / 休闲"
+                              className={`px-2 py-0.5 rounded-md text-[10px] font-medium shrink-0 transition cursor-pointer border ${
+                                ride.is_commute 
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' 
+                                  : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                              }`}
+                            >
+                              {ride.is_commute ? '上班通勤' : '休闲骑行'}
+                            </button>
+                          </div>
+                          <p className="text-xs text-slate-400 mt-1">
+                            {new Date(ride.start_date).toLocaleDateString()} · {Math.round(ride.moving_time / 60)} 分钟
+                          </p>
+                        </div>
+                        <div className="md:hidden text-right shrink-0">
+                          <span className="font-bold text-slate-700 text-base">{(ride.distance / 1000).toFixed(1)}</span>
+                          <span className="text-xs text-slate-500 font-medium ml-0.5">km</span>
+                        </div>
                       </div>
-                      <p className="text-xs text-slate-400 mt-1">
-                        {new Date(ride.start_date).toLocaleDateString()} · {Math.round(ride.moving_time / 60)} 分钟
-                      </p>
-                    </div>
-                    <div className="md:hidden text-right shrink-0">
-                      <span className="font-bold text-slate-700 text-base">{(ride.distance / 1000).toFixed(1)}</span>
-                      <span className="text-xs text-slate-500 font-medium ml-0.5">km</span>
-                    </div>
-                  </div>
 
-                  <div className="w-full md:w-1/3 flex items-center gap-2 text-xs">
-                    <div className="bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl flex-1 truncate">
-                      <span className="text-slate-400 block text-[10px] mb-0.5">起点站</span>
-                      <span className="font-semibold text-slate-700 truncate">{ride.start_station || '未知'}</span>
-                    </div>
-                    <span className="text-slate-400 font-bold">→</span>
-                    <div className="bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl flex-1 truncate">
-                      <span className="text-slate-400 block text-[10px] mb-0.5">终点站</span>
-                      <span className="font-semibold text-slate-700 truncate">{ride.end_station || '未知'}</span>
-                    </div>
-                  </div>
+                      <div className="w-full md:w-1/3 flex items-center gap-2 text-xs">
+                        <div className="bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl flex-1 truncate">
+                          <span className="text-slate-400 block text-[10px] mb-0.5">起点站</span>
+                          <span className="font-semibold text-slate-700 truncate">{ride.start_station || '未知'}</span>
+                        </div>
+                        <span className="text-slate-400 font-bold">→</span>
+                        <div className="bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl flex-1 truncate">
+                          <span className="text-slate-400 block text-[10px] mb-0.5">终点站</span>
+                          <span className="font-semibold text-slate-700 truncate">{ride.end_station || '未知'}</span>
+                        </div>
+                      </div>
 
-                  <div className="hidden md:block w-1/6 text-right">
-                    <span className="font-semibold text-slate-700">{(ride.distance / 1000).toFixed(2)} km</span>
-                  </div>
+                      <div className="hidden md:block w-1/6 text-right">
+                        <span className="font-semibold text-slate-700">{(ride.distance / 1000).toFixed(2)} km</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           )}
         </div>
