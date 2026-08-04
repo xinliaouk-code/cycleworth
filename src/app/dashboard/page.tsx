@@ -1,9 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation' // 新增路由功能
 import { supabase } from '../../lib/supabase'
 
 export default function DashboardPage() {
+  const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [isConnected, setIsConnected] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
@@ -13,14 +15,53 @@ export default function DashboardPage() {
   useEffect(() => {
     async function init() {
       const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        setUser(user)
+      
+      if (!user) {
+        // 核心修复 1：如果没登录，直接打回登录页
+        router.push('/login')
+        return
+      }
+      
+      setUser(user)
+
+      // 核心修复 2：检查网址里是否有 Strava 带回来的授权码 code
+      const urlParams = new URLSearchParams(window.location.search)
+      const code = urlParams.get('code')
+      
+      if (code) {
+        await handleExchangeCode(code, user.id)
+      } else {
         checkExistingConnection(user.id)
         fetchRides(user.id)
       }
     }
     init()
-  }, [])
+  }, [router])
+
+  // 新增：自动用 code 换取真正 token 的逻辑
+  async function handleExchangeCode(code: string, userId: string) {
+    setSyncMsg('正在处理 Strava 授权...')
+    try {
+      // 这里调用了你写好的 exchange 接口
+      const res = await fetch('/api/strava/exchange', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, userId })
+      })
+      
+      if (res.ok) {
+        setIsConnected(true)
+        setSyncMsg('✓ Strava 连接成功！')
+        // 清理掉网址上的 code，防止刷新页面时重复请求
+        window.history.replaceState({}, document.title, '/dashboard')
+        fetchRides(userId)
+      } else {
+        setSyncMsg('授权处理失败，请重试')
+      }
+    } catch (error) {
+      setSyncMsg('请求异常，请检查网络')
+    }
+  }
 
   async function checkExistingConnection(userId: string) {
     const { data } = await supabase
@@ -32,7 +73,6 @@ export default function DashboardPage() {
     if (data) setIsConnected(true)
   }
 
-  // 从数据库获取骑行列表
   async function fetchRides(userId: string) {
     const { data } = await supabase
       .from('rides')
@@ -69,13 +109,12 @@ export default function DashboardPage() {
     }
   }
 
-  // 修改点：更新为了线上的 Vercel 域名并读取环境变量
   const DOMAIN = "https://cycleworth.vercel.app"
-  const clientId = '269704'
+  const clientId = process.env.NEXT_PUBLIC_STRAVA_CLIENT_ID
   const redirectUri = `${DOMAIN}/api/strava/callback`
-  const stravaAuthUrl = `https://www.strava.com/oauth/mobile/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&approval_prompt=auto&scope=activity:read_all`
+  // 核心修复 3：去掉了 /mobile，变回最稳定的标准网页端授权
+  const stravaAuthUrl = `https://www.strava.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&approval_prompt=auto&scope=activity:read_all`
 
-  // 计算总里程（米转公里）和预估节省的 TfL 交通费（假设每次通勤省 £3.90）
   const totalDistanceKm = (rides.reduce((acc, r) => acc + (r.distance || 0), 0) / 1000).toFixed(1)
   const estimatedSavings = (rides.length * 3.90).toFixed(2)
 
@@ -91,7 +130,6 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        {/* 核心财务与数据统计卡片 */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
             <p className="text-sm font-medium text-slate-400">总骑行次数</p>
@@ -107,7 +145,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* 数据源控制台 */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold text-slate-800">Strava 数据同步</h2>
@@ -126,7 +163,7 @@ export default function DashboardPage() {
             )}
             <button
               onClick={handleSync}
-              disabled={isSyncing}
+              disabled={isSyncing || !isConnected} // 没连接时也不允许瞎点同步
               className="px-5 py-2 bg-sky-600 text-white text-sm font-medium rounded-xl hover:bg-sky-700 disabled:opacity-50"
             >
               {isSyncing ? '同步中...' : '同步记录'}
@@ -140,7 +177,6 @@ export default function DashboardPage() {
           </p>
         )}
 
-        {/* 骑行记录明细表 */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
           <h2 className="text-lg font-semibold text-slate-800">近期骑行明细</h2>
           
