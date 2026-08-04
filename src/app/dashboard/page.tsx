@@ -69,13 +69,15 @@ export default function DashboardPage() {
     }
   }
 
-  const clientId = '269704'
-  const redirectUri = 'http://localhost:3000/api/strava/callback'
+  // 修改点：更新为了线上的 Vercel 域名并读取环境变量
+  const DOMAIN = "https://cycleworth.vercel.app"
+  const clientId = process.env.NEXT_PUBLIC_STRAVA_CLIENT_ID
+  const redirectUri = `${DOMAIN}/api/strava/callback`
   const stravaAuthUrl = `https://www.strava.com/oauth/mobile/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&approval_prompt=auto&scope=activity:read_all`
 
-  // 计算总里程（米转公里）和预估节省的 TfL 交通费（假设每次通勤省 £7.60，或者根据里程粗算）
+  // 计算总里程（米转公里）和预估节省的 TfL 交通费（假设每次通勤省 £3.90）
   const totalDistanceKm = (rides.reduce((acc, r) => acc + (r.distance || 0), 0) / 1000).toFixed(1)
-  const estimatedSavings = (rides.length * 3.90).toFixed(2) // 按照每趟 £3.90 折算 TfL 费用
+  const estimatedSavings = (rides.length * 3.90).toFixed(2)
 
   return (
     <main className="min-h-screen bg-slate-50 p-8">
@@ -89,7 +91,7 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        {/* 核心财务与数据统计卡片 (Apple 风格) */}
+        {/* 核心财务与数据统计卡片 */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
             <p className="text-sm font-medium text-slate-400">总骑行次数</p>
