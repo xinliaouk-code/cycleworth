@@ -23,7 +23,6 @@ export default function DashboardPage() {
       
       setUser(user)
 
-      // 核心：检查网址里是否有 Strava 带回来的授权码 code
       const urlParams = new URLSearchParams(window.location.search)
       const code = urlParams.get('code')
       
@@ -37,7 +36,6 @@ export default function DashboardPage() {
     init()
   }, [router])
 
-  // 自动用 code 换取 Token 的核心函数
   async function handleExchangeCode(code: string, userId: string) {
     setSyncMsg('正在处理 Strava 授权并同步最新记录...')
     setIsSyncing(true)
@@ -87,7 +85,6 @@ export default function DashboardPage() {
     }
   }
 
-  // 内部同步函数
   async function handleSyncInternal(userId: string) {
     try {
       const res = await fetch('/api/strava/sync', {
@@ -110,7 +107,6 @@ export default function DashboardPage() {
     }
   }
 
-  // 用户主动点击同步按钮
   async function handleSync() {
     if (!user) return
     setIsSyncing(true)
@@ -124,11 +120,14 @@ export default function DashboardPage() {
   const stravaAuthUrl = `https://www.strava.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&approval_prompt=auto&scope=read,activity:read_all`
 
   const totalDistanceKm = (rides.reduce((acc, r) => acc + (r.distance || 0), 0) / 1000).toFixed(1)
-  const estimatedSavings = (rides.length * 3.90).toFixed(2)
+  
+  // 核心优化：只过滤并计算标记为“通勤 (is_commute === true)”的次数来节省开支
+  const commuteRidesCount = rides.filter(r => r.is_commute).length
+  const estimatedSavings = (commuteRidesCount * 3.90).toFixed(2)
 
   return (
     <main className="min-h-screen bg-slate-50 p-8">
-      <div className="max-w-3xl mx-auto mt-8 space-y-6">
+      <div className="max-w-4xl mx-auto mt-8 space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-slate-800 tracking-tight mb-2">
             CycleWorth 个人财务仪表盘
@@ -148,7 +147,7 @@ export default function DashboardPage() {
             <p className="text-3xl font-bold text-slate-800 mt-2">{totalDistanceKm} <span className="text-sm font-normal text-slate-500">km</span></p>
           </div>
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 bg-gradient-to-br from-sky-50 to-white">
-            <p className="text-sm font-medium text-sky-600">已节省交通开支 (TfL)</p>
+            <p className="text-sm font-medium text-sky-600">已节省交通开支 (TfL · 仅通勤)</p>
             <p className="text-3xl font-bold text-sky-700 mt-2">£{estimatedSavings}</p>
           </div>
         </div>
@@ -193,20 +192,41 @@ export default function DashboardPage() {
           ) : (
             <div className="divide-y divide-slate-100">
               {rides.map((ride) => (
-                <div key={ride.id} className="py-3 flex items-center justify-between text-sm">
-                  <div className="space-y-1">
-                    <p className="font-medium text-slate-800">{ride.name || '无标题骑行'}</p>
-                    <p className="text-xs text-slate-400">
+                <div key={ride.id} className="py-3.5 flex items-center justify-between text-sm gap-4">
+                  {/* 左侧：名称、时间、通勤/休闲标签 */}
+                  <div className="w-1/3">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-slate-800 truncate">{ride.name || '无标题骑行'}</p>
+                      {ride.is_commute ? (
+                        <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-md text-[10px] font-medium shrink-0">
+                          上班通勤
+                        </span>
+                      ) : (
+                        <span className="bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded-md text-[10px] font-medium shrink-0">
+                          休闲骑行
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">
                       {new Date(ride.start_date).toLocaleDateString()} · {Math.round(ride.moving_time / 60)} 分钟
                     </p>
-                    {/* 地铁站起终点标签 */}
-                    <div className="flex items-center gap-2 text-xs text-slate-600 font-medium mt-1">
-                      <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-700">📍 起点: {ride.start_station || '未知'}</span>
-                      <span>→</span>
-                      <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-700">🏁 终点: {ride.end_station || '未知'}</span>
+                  </div>
+
+                  {/* 中间：起点和终点地铁站 */}
+                  <div className="w-1/3 flex items-center gap-2 text-xs">
+                    <div className="bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-xl flex-1 truncate">
+                      <span className="text-slate-400 block text-[10px]">起点站</span>
+                      <span className="font-semibold text-slate-700 truncate">{ride.start_station || '未知'}</span>
+                    </div>
+                    <span className="text-slate-400 font-bold">→</span>
+                    <div className="bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-xl flex-1 truncate">
+                      <span className="text-slate-400 block text-[10px]">终点站</span>
+                      <span className="font-semibold text-slate-700 truncate">{ride.end_station || '未知'}</span>
                     </div>
                   </div>
-                  <div className="text-right">
+
+                  {/* 右侧：距离 */}
+                  <div className="w-1/6 text-right">
                     <span className="font-semibold text-slate-700">{(ride.distance / 1000).toFixed(2)} km</span>
                   </div>
                 </div>
