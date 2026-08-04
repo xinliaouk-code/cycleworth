@@ -5,13 +5,13 @@ import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { supabase } from '../../lib/supabase'
 
-// 1. 严格使用大写 MapHover 匹配组件名称和文件路径，彻底规避大小写报错
+// 动态引入地图组件
 const MapHover = dynamic<{ polyline: string }>(
   () => import('../../components/MapHover'), 
   { ssr: false }
 )
 
-// 2. 严谨的 TypeScript 接口定义，彻底消灭 any 报错
+// TypeScript 接口定义
 type Ride = {
   id: string;
   name: string;
@@ -42,7 +42,6 @@ export default function DashboardPage() {
         return
       }
       
-      // 规避 Supabase 复杂的 Auth User 类型不匹配警告
       // @ts-ignore
       setUser(user)
 
@@ -286,7 +285,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 地图悬浮窗 - 在移动端自动隐藏以免影响滑动体验 */}
       {hoveredRide && (
         <div 
           className="fixed pointer-events-none z-50 transform -translate-x-1/2 -translate-y-full mb-3 transition-all duration-75 ease-out hidden md:block"
