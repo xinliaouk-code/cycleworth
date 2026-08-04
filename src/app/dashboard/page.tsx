@@ -85,14 +85,11 @@ export default function DashboardPage() {
     }
   }
 
-  // 核心：点击标签时切换状态并持久化保存到 Supabase
   async function handleToggleCommute(rideId: string, currentVal: boolean) {
     const newVal = !currentVal
 
-    // 1. 界面前端先做秒级响应更新
     setRides(rides.map(r => r.id === rideId ? { ...r, is_commute: newVal } : r))
 
-    // 2. 异步同步保存到 Supabase 数据库
     const { error } = await supabase
       .from('rides')
       .update({ is_commute: newVal })
@@ -100,7 +97,6 @@ export default function DashboardPage() {
 
     if (error) {
       console.error('更新通勤状态失败:', error.message)
-      // 如果出错则重新拉取恢复原状
       if (user) fetchRides(user.id)
     }
   }
@@ -140,21 +136,25 @@ export default function DashboardPage() {
   const stravaAuthUrl = `https://www.strava.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&approval_prompt=auto&scope=read,activity:read_all`
 
   const totalDistanceKm = (rides.reduce((acc, r) => acc + (r.distance || 0), 0) / 1000).toFixed(1)
-  
-  // 只统计标记为通勤的次数来计算节省开支
   const commuteRidesCount = rides.filter(r => r.is_commute).length
   const estimatedSavings = (commuteRidesCount * 3.90).toFixed(2)
 
   return (
     <main className="min-h-screen bg-slate-50 p-8">
       <div className="max-w-4xl mx-auto mt-8 space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-800 tracking-tight mb-2">
-            CycleWorth 个人财务仪表盘
-          </h1>
-          <p className="text-slate-500">
-            当前登录: {user?.email || '加载中...'}
-          </p>
+        {/* 极简页头：CycleWorth 与 Every ride has value. */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800 tracking-tight">
+              CycleWorth
+            </h1>
+            <p className="text-sm text-slate-500 mt-0.5">
+              Every ride has value.
+            </p>
+          </div>
+          <div className="text-right text-xs text-slate-400">
+            {user?.email}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
