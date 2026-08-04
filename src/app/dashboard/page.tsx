@@ -5,13 +5,13 @@ import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { supabase } from '../../lib/supabase'
 
-// 动态引入地图组件
-const MapHover = dynamic<{ polyline: string }>(
-  () => import('../../components/MapHover'), 
+// 1. 换用全新的名字 RideMap，彻底绕开之前的 Git 大小写缓存陷阱
+const RideMap = dynamic<{ polyline: string }>(
+  () => import('../../components/RideMap'), 
   { ssr: false }
 )
 
-// TypeScript 接口定义
+// 2. TypeScript 接口定义
 type Ride = {
   id: string;
   name: string;
@@ -290,7 +290,8 @@ export default function DashboardPage() {
           className="fixed pointer-events-none z-50 transform -translate-x-1/2 -translate-y-full mb-3 transition-all duration-75 ease-out hidden md:block"
           style={{ left: `${mousePos.x}px`, top: `${mousePos.y - 10}px` }}
         >
-          <MapHover polyline={hoveredRide.summary_polyline} />
+          {/* 3. 使用全新的大写标签 RideMap */}
+          <RideMap polyline={hoveredRide.summary_polyline} />
         </div>
       )}
     </main>
