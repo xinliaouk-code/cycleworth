@@ -131,6 +131,19 @@ function getNearestStation(lat?: number, lng?: number): string {
   return nearest.name
 }
 
+// -----------------------------------------------------------------------------------
+// 核心新增：基于专属站点的智能通勤判断 (Custom House/Royal Victoria ⇋ Bank/Old Street)
+// -----------------------------------------------------------------------------------
+function checkIsCommute(startStation: string, endStation: string): boolean {
+  const residentialHubs = ["Custom House", "Royal Victoria"]
+  const financialHubs = ["Bank", "Old Street"]
+
+  const isResToFin = residentialHubs.includes(startStation) && financialHubs.includes(endStation)
+  const isFinToRes = financialHubs.includes(startStation) && residentialHubs.includes(endStation)
+
+  return isResToFin || isFinToRes
+}
+
 export async function POST(request: Request) {
   try {
     const { userId } = await request.json()
@@ -190,10 +203,10 @@ export async function POST(request: Request) {
     }
 
     // -------------------------------------------------------------------------
-    // 核心修改：通过 while 循环进行分页拉取，直到把 Strava 所有历史活动拉完
+    // 分页循环拉取 Strava 所有历史活动
     // -------------------------------------------------------------------------
     let page = 1
-    const perPage = 100 // 每页拉取 100 条（Strava 支持最大 200）
+    const perPage = 100 
     let allActivities: any[] = []
 
     while (true) {
@@ -210,12 +223,11 @@ export async function POST(request: Request) {
 
       const activities = await stravaRes.json()
       if (!Array.isArray(activities) || activities.length === 0) {
-        break // 没有更多数据了，跳出循环
+        break 
       }
 
       allActivities = allActivities.concat(activities)
 
-      // 如果当前页返回的数量小于 perPage，说明已经是最后一页了
       if (activities.length < perPage) {
         break
       }
@@ -227,7 +239,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, count: 0, message: '没有获取到任何 Strava 活动' })
     }
 
-    // 获取数据库中已存在的记录，用于比对更新或插入
     const { data: existingRides } = await supabase
       .from('rides')
       .select('id, strava_activity_id, name, start_date')
@@ -281,6 +292,9 @@ export async function POST(request: Request) {
           })
           .eq('id', matchedRecord.id)
       } else {
+        // 核心修改：在插入新记录时，调用函数自动判定是否为通勤
+        const isAutoCommute = checkIsCommute(startStation, endStation)
+
         await supabase
           .from('rides')
           .insert({
@@ -292,7 +306,7 @@ export async function POST(request: Request) {
             elapsed_time: act.elapsed_time,
             type: act.type,
             start_date: act.start_date,
-            is_commute: act.commute || false,
+            is_commute: isAutoCommute, // 👈 自动识别的结果将保存到数据库
             start_station: startStation,
             end_station: endStation,
             summary_polyline: summaryPolyline

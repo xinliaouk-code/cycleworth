@@ -117,7 +117,7 @@ export default function DashboardPage() {
     }
   }
 
-  async function handleSyncInternal(userId: string) {
+async function handleSyncInternal(userId: string) {
     try {
       const res = await fetch('/api/strava/sync', {
         method: 'POST',
@@ -127,7 +127,8 @@ export default function DashboardPage() {
       const result = await res.json()
 
       if (result.success) {
-        setSyncMsg(`成功同步最新记录，共获取 ${result.count} 条！`)
+        // 👉 把这里改成你截图里的新提示信息
+        setSyncMsg(`同步完成！已成功获取最新记录，并自动识别 Custom House / Royal Victoria ⇋ Bank / Old Street 往返通勤路线。`)
         fetchRides(userId)
       } else {
         setSyncMsg('同步失败：' + (result.error || '未知错误'))
@@ -214,9 +215,10 @@ export default function DashboardPage() {
         </div>
 
         {syncMsg && (
-          <p className="text-sm text-sky-600 bg-sky-50 p-3 rounded-xl border border-sky-100">
-            {syncMsg}
-          </p>
+          <div className="flex items-center gap-2 text-sm text-sky-700 bg-sky-50 p-4 rounded-2xl border border-sky-100 shadow-sm animate-in fade-in duration-200">
+            <span className="text-lg">💡</span>
+            <p className="font-medium">{syncMsg}</p>
+          </div>
         )}
 
         <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
