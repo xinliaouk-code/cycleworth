@@ -102,12 +102,16 @@ export default function MapHover({ polyline }: MapHoverProps) {
     }
   }, [])
 
+// src/components/RideMap.tsx
+// ... 前面的逻辑保持不变 ...
+
   if (!polyline) {
-    return <div className="text-xs text-slate-400 flex items-center justify-center h-36 bg-slate-100 rounded-2xl">暂无轨迹数据</div>
+    return <div className="text-xs text-slate-400 flex items-center justify-center h-48 bg-slate-100 rounded-2xl">暂无轨迹数据</div>
   }
 
   return (
-    <div className="w-[260px] h-[160px] rounded-2xl overflow-hidden shadow-2xl border border-slate-200 bg-white relative">
+    // 关键点：这里必须是 w-full h-full，让它完全听从父容器的尺寸裁切
+    <div className="w-full h-full rounded-2xl overflow-hidden shadow-sm border border-slate-200 bg-white relative">
       <div ref={mapContainerRef} className="w-full h-full" />
       <div className="absolute top-2 left-2 bg-white/90 backdrop-blur px-2 py-0.5 rounded-lg text-[10px] font-semibold text-slate-700 shadow-sm z-[1000] border border-slate-100">
         🗺️ 真实路线地图

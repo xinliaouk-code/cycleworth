@@ -304,10 +304,10 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* 手机端点击弹窗 (方案一：底部抽屉 Modal) */}
+{/* 手机端点击弹窗 (方案一：底部抽屉 Modal) */}
       {selectedRide && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/40 backdrop-blur-xs transition-all">
-          <div className="bg-white w-full md:w-[420px] rounded-t-3xl md:rounded-2xl p-6 shadow-2xl border border-slate-100 space-y-4 animate-in fade-in slide-in-from-bottom duration-200">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/40 backdrop-blur-xs transition-all p-0 md:p-4">
+          <div className="bg-white w-full md:w-[480px] rounded-t-3xl md:rounded-2xl p-6 shadow-2xl border border-slate-100 space-y-4 animate-in fade-in slide-in-from-bottom duration-200">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-bold text-slate-800 text-lg truncate max-w-[280px]">
@@ -325,8 +325,8 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            {/* 弹窗内的放大版地图 */}
-            <div className="w-full h-64 rounded-2xl overflow-hidden border border-slate-200 relative shadow-inner">
+            {/* 关键修改：w-full 撑满弹窗宽度，h-56 提供舒适的手机端地图高度 */}
+            <div className="w-full h-56 rounded-2xl overflow-hidden relative">
               <RideMap polyline={selectedRide.summary_polyline} />
             </div>
 
