@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
-interface RouteMapPreviewProps {
+interface MapHoverProps {
   polyline: string
 }
 
@@ -36,14 +36,14 @@ function decodePolyline(encoded: string): [number, number][] {
   return points
 }
 
-export default function RouteMapPreview({ polyline }: RouteMapPreviewProps) {
+export default function MapHover({ polyline }: MapHoverProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
 
   useEffect(() => {
     if (!mapContainerRef.current || !polyline) return
 
-    // 初始化地图实例（仅执行一次）
+    // 初始化地图实例
     if (!mapInstanceRef.current) {
       const map = L.map(mapContainerRef.current, {
         zoomControl: false,
