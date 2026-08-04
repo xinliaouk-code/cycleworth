@@ -71,7 +71,7 @@ export default function DashboardPage() {
 
   // 修改点：更新为了线上的 Vercel 域名并读取环境变量
   const DOMAIN = "https://cycleworth.vercel.app"
-  const clientId = process.env.NEXT_PUBLIC_STRAVA_CLIENT_ID
+  const clientId = '269704'
   const redirectUri = `${DOMAIN}/api/strava/callback`
   const stravaAuthUrl = `https://www.strava.com/oauth/mobile/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&approval_prompt=auto&scope=activity:read_all`
 
