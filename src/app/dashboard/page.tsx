@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { supabase } from '../../lib/supabase'
@@ -30,10 +30,7 @@ export default function DashboardPage() {
   const [rides, setRides] = useState<Ride[]>([])
   const [syncMsg, setSyncMsg] = useState('')
   
-  const [hoveredRide, setHoveredRide] = useState<Ride | null>(null)
-  const tooltipRef = useRef<HTMLDivElement>(null)
-  const mouseRef = useRef({ x: 0, y: 0 })
-
+  // 统一的点击弹窗状态（电脑端与手机端通用）
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null)
 
   useEffect(() => {
@@ -159,16 +156,7 @@ export default function DashboardPage() {
   const estimatedSavings = (commuteRidesCount * 3.90).toFixed(2)
 
   return (
-    <main 
-      className="min-h-screen bg-slate-50 p-4 md:p-8 relative"
-      onMouseMove={(e) => {
-        mouseRef.current = { x: e.clientX, y: e.clientY }
-        if (tooltipRef.current) {
-          tooltipRef.current.style.left = `${e.clientX}px`
-          tooltipRef.current.style.top = `${e.clientY - 10}px`
-        }
-      }}
-    >
+    <main className="min-h-screen bg-slate-50 p-4 md:p-8 relative">
       <div className="max-w-4xl mx-auto mt-4 md:mt-8 space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -242,20 +230,7 @@ export default function DashboardPage() {
                 <div 
                   key={ride.id} 
                   className="py-4 flex flex-col md:flex-row md:items-center justify-between text-sm gap-4 hover:bg-slate-50/80 px-2 md:px-3 rounded-xl transition cursor-pointer"
-                  onMouseEnter={() => {
-                    // 核心修复：鼠标移入时立即捕获当前坐标并赋值给悬浮窗 DOM，防止初次渲染位置不对
-                    if (tooltipRef.current) {
-                      tooltipRef.current.style.left = `${mouseRef.current.x}px`
-                      tooltipRef.current.style.top = `${mouseRef.current.y - 10}px`
-                    }
-                    setHoveredRide(ride)
-                  }}
-                  onMouseLeave={() => setHoveredRide(null)}
-                  onClick={() => {
-                    if (window.innerWidth < 768) {
-                      setSelectedRide(ride)
-                    }
-                  }}
+                  onClick={() => setSelectedRide(ride)}
                 >
                   <div className="w-full md:w-1/3 flex items-start justify-between md:justify-start gap-2">
                     <div>
@@ -308,17 +283,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 电脑端悬浮地图 */}
-      {hoveredRide && (
-        <div 
-          ref={tooltipRef}
-          className="fixed pointer-events-none z-50 transform -translate-x-1/2 -translate-y-full mb-3 transition-all duration-75 ease-out hidden md:block"
-        >
-          <RideMap polyline={hoveredRide.summary_polyline} />
-        </div>
-      )}
-
-      {/* 手机端点击弹窗 */}
+      {/* 统一的点击详情弹窗（电脑端与手机端通用） */}
       {selectedRide && (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/40 backdrop-blur-xs transition-all p-0 md:p-4">
           <div className="bg-white w-full md:w-[480px] rounded-t-3xl md:rounded-2xl p-6 shadow-2xl border border-slate-100 space-y-4 animate-in fade-in slide-in-from-bottom duration-200">
