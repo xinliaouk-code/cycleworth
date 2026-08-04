@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { supabase } from '../../lib/supabase'
 
-// 动态引入地图组件
 const RideMap = dynamic<{ polyline: string }>(
   () => import('../../components/RideMap'), 
   { ssr: false }
@@ -35,7 +34,7 @@ export default function DashboardPage() {
   const [hoveredRide, setHoveredRide] = useState<Ride | null>(null)
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
 
-  // 手机端点击弹窗状态 (方案一：底部抽屉弹窗)
+  // 手机端点击弹窗状态
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null)
 
   useEffect(() => {
@@ -236,24 +235,23 @@ export default function DashboardPage() {
             <div className="divide-y divide-slate-100">
               {rides.map((ride) => (
                 <div 
-  key={ride.id} 
-  className="py-4 flex flex-col md:flex-row md:items-center justify-between text-sm gap-4 hover:bg-slate-50/80 px-2 md:px-3 rounded-xl transition cursor-pointer"
-  onMouseEnter={() => setHoveredRide(ride)}
-  onMouseLeave={() => setHoveredRide(null)}
-  onClick={() => {
-    // 核心优化：只有在移动端（屏幕宽度小于 768px）点击时才弹出抽屉，电脑端完全保留 Hover 悬停
-    if (window.innerWidth < 768) {
-      setSelectedRide(ride)
-    }
-  }}
->
+                  key={ride.id} 
+                  className="py-4 flex flex-col md:flex-row md:items-center justify-between text-sm gap-4 hover:bg-slate-50/80 px-2 md:px-3 rounded-xl transition cursor-pointer"
+                  onMouseEnter={() => setHoveredRide(ride)}
+                  onMouseLeave={() => setHoveredRide(null)}
+                  onClick={() => {
+                    if (window.innerWidth < 768) {
+                      setSelectedRide(ride)
+                    }
+                  }}
+                >
                   <div className="w-full md:w-1/3 flex items-start justify-between md:justify-start gap-2">
                     <div>
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-slate-800 truncate max-w-[140px] md:max-w-[200px]">{ride.name || '无标题骑行'}</p>
                         <button
                           onClick={(e) => {
-                            e.stopPropagation() // 防止点击标签时触发整行的 onClick 弹窗
+                            e.stopPropagation()
                             handleToggleCommute(ride.id, ride.is_commute)
                           }}
                           title="点击切换 通勤 / 休闲"
@@ -308,7 +306,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-{/* 手机端点击弹窗 (方案一：底部抽屉 Modal) */}
+      {/* 手机端点击弹窗 */}
       {selectedRide && (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/40 backdrop-blur-xs transition-all p-0 md:p-4">
           <div className="bg-white w-full md:w-[480px] rounded-t-3xl md:rounded-2xl p-6 shadow-2xl border border-slate-100 space-y-4 animate-in fade-in slide-in-from-bottom duration-200">
@@ -329,7 +327,6 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            {/* 关键修改：w-full 撑满弹窗宽度，h-56 提供舒适的手机端地图高度 */}
             <div className="w-full h-56 rounded-2xl overflow-hidden relative">
               <RideMap polyline={selectedRide.summary_polyline} />
             </div>
