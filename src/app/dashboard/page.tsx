@@ -1,11 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 
 // Google Polyline 解码函数
-function decodePolyline(encoded: string) {
+function decodePolyline(encoded: string): [number, number][] {
   let points: [number, number][] = []
   let index = 0, len = encoded.length
   let lat = 0, lng = 0
@@ -32,50 +34,84 @@ function decodePolyline(encoded: string) {
   return points
 }
 
-// 路线缩略图组件
+// 真实地图缩略图组件
 function RouteMapPreview({ polyline }: { polyline: string }) {
+  const mapContainerRef = useRef<HTMLDivElement>(null)
+  const mapInstanceRef = useRef<L.Map | null>(null)
+
+  useEffect(() => {
+    if (!mapContainerRef.current || !polyline) return
+
+    // 初始化地图实例
+    if (!mapInstanceRef.current) {
+      const map = L.map(mapContainerRef.current, {
+        zoomControl: false,
+        attributionControl: false,
+        dragging: false,
+        scrollWheelZoom: false,
+        doubleClickZoom: false,
+        boxZoom: false,
+        keyboard: false,
+      })
+
+      // 加载高颜值精美浅色地图底图 (CartoDB Voyager)
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd',
+      }).addTo(map)
+
+      mapInstanceRef.current = map
+    }
+
+    const map = mapInstanceRef.current
+    const coords = decodePolyline(polyline)
+
+    if (coords.length > 0) {
+      // 清理旧的轨迹图层
+      map.eachLayer((layer) => {
+        if (layer instanceof L.Polyline) {
+          map.removeLayer(layer)
+        }
+      })
+
+      // 绘制骑行轨迹路线
+      const polylineLayer = L.polyline(coords, {
+        color: '#0284c7', // 天蓝色
+        weight: 4.5,
+        opacity: 0.9,
+      }).addTo(map)
+
+      // 自动缩放并居中适配路线
+      map.fitBounds(polylineLayer.getBounds(), { padding: [15, 15] })
+    }
+
+    // 解决容器大小调整问题
+    setTimeout(() => {
+      map.invalidateSize()
+    }, 50)
+
+  }, [polyline])
+
+  // 组件卸载时销毁地图
+  useEffect(() => {
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove()
+        mapInstanceRef.current = null
+      }
+    }
+  }, [])
+
   if (!polyline) {
-    return <div className="text-xs text-slate-400 flex items-center justify-center h-32">暂无轨迹数据</div>
+    return <div className="text-xs text-slate-400 flex items-center justify-center h-36 bg-slate-100 rounded-2xl">暂无轨迹数据</div>
   }
-  const coords = decodePolyline(polyline)
-  if (coords.length === 0) {
-    return <div className="text-xs text-slate-400 flex items-center justify-center h-32">轨迹解析失败</div>
-  }
-
-  let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity
-  coords.forEach(([lat, lng]) => {
-    if (lat < minLat) minLat = lat
-    if (lat > maxLat) maxLat = lat
-    if (lng < minLng) minLng = lng
-    if (lng > maxLng) maxLng = lng
-  })
-
-  const width = 240
-  const height = 140
-  const padding = 20
-
-  const latRange = maxLat - minLat || 0.0001
-  const lngRange = maxLng - minLng || 0.0001
-
-  const pointsStr = coords.map(([lat, lng]) => {
-    const x = padding + ((lng - minLng) / lngRange) * (width - padding * 2)
-    const y = height - (padding + ((lat - minLat) / latRange) * (height - padding * 2))
-    return `${x},${y}`
-  }).join(' ')
 
   return (
-    <div className="bg-slate-900 rounded-2xl p-2 shadow-xl border border-slate-800">
-      <p className="text-[10px] text-slate-400 px-2 pt-1 font-medium mb-1">🗺️ 路线轨迹预览</p>
-      <svg width={width} height={height} className="rounded-xl bg-slate-950 overflow-hidden">
-        <polyline
-          fill="none"
-          stroke="#38bdf8"
-          strokeWidth="3.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          points={pointsStr}
-        />
-      </svg>
+    <div className="w-[260px] h-[160px] rounded-2xl overflow-hidden shadow-2xl border border-slate-200 bg-white relative">
+      <div ref={mapContainerRef} className="w-full h-full" />
+      <div className="absolute top-2 left-2 bg-white/90 backdrop-blur px-2 py-0.5 rounded-lg text-[10px] font-semibold text-slate-700 shadow-sm z-[1000] border border-slate-100">
+        🗺️ 真实路线地图
+      </div>
     </div>
   )
 }
@@ -333,7 +369,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 悬浮跟随鼠标的地图路线预览窗口 */}
+      {/* 真实地图路线预览悬浮窗 */}
       {hoveredRide && (
         <div 
           className="fixed pointer-events-none z-50 transform -translate-x-1/2 -translate-y-full mb-3 transition-all duration-75 ease-out"
