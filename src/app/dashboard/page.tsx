@@ -22,12 +22,50 @@ export default function DashboardPage() {
       }
       
       setUser(user)
-      // 直接检查数据库连接和获取历史骑行
-      await checkExistingConnection(user.id)
-      await fetchRides(user.id)
+
+      // 核心：检查网址里是否有 Strava 带回来的授权码 code
+      const urlParams = new URLSearchParams(window.location.search)
+      const code = urlParams.get('code')
+      
+      if (code) {
+        // 如果有 code，自动去换取 Token 并同步
+        await handleExchangeCode(code, user.id)
+      } else {
+        // 正常加载连接状态和历史骑行
+        await checkExistingConnection(user.id)
+        await fetchRides(user.id)
+      }
     }
     init()
   }, [router])
+
+  // 自动用 code 换取 Token 的核心函数
+  async function handleExchangeCode(code: string, userId: string) {
+    setSyncMsg('正在处理 Strava 授权并同步最新记录...')
+    setIsSyncing(true)
+    try {
+      const res = await fetch('/api/strava/exchange', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, userId })
+      })
+      
+      if (res.ok) {
+        setIsConnected(true)
+        // 清理掉网址上的 code，保持页面清爽
+        window.history.replaceState({}, document.title, '/dashboard')
+        // 换完钥匙后，立即自动同步获取最新骑行数据！
+        await handleSyncInternal(userId)
+      } else {
+        const errData = await res.json()
+        setSyncMsg('授权处理失败：' + (errData.error || '未知错误'))
+        setIsSyncing(false)
+      }
+    } catch (error) {
+      setSyncMsg('请求异常，请检查网络')
+      setIsSyncing(false)
+    }
+  }
 
   async function checkExistingConnection(userId: string) {
     const { data } = await supabase
@@ -53,22 +91,19 @@ export default function DashboardPage() {
     }
   }
 
-  async function handleSync() {
-    if (!user) return
-    setIsSyncing(true)
-    setSyncMsg('正在从 Strava 同步骑行数据...')
-
+  // 内部同步函数
+  async function handleSyncInternal(userId: string) {
     try {
       const res = await fetch('/api/strava/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id })
+        body: JSON.stringify({ userId })
       })
       const result = await res.json()
 
       if (result.success) {
-        setSyncMsg(`成功同步 ${result.count} 条记录！`)
-        fetchRides(user.id)
+        setSyncMsg(`成功同步最新记录，共获取 ${result.count} 条！`)
+        fetchRides(userId)
       } else {
         setSyncMsg('同步失败：' + (result.error || '未知错误'))
       }
@@ -79,10 +114,19 @@ export default function DashboardPage() {
     }
   }
 
+  // 用户主动点击同步按钮
+  async function handleSync() {
+    if (!user) return
+    setIsSyncing(true)
+    setSyncMsg('正在从 Strava 同步最新骑行数据...')
+    await handleSyncInternal(user.id)
+  }
+
   const DOMAIN = "https://cycleworth.vercel.app"
   const clientId = process.env.NEXT_PUBLIC_STRAVA_CLIENT_ID
-  const redirectUri = `${DOMAIN}/api/strava/callback`
-  const stravaAuthUrl = `https://www.strava.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&approval_prompt=auto&scope=activity:read_all`
+  // 巧妙的设计：让 Strava 直接跳回 dashboard 页面本身，免去繁琐的 callback 路由死角
+  const redirectUri = `${DOMAIN}/dashboard`
+  const stravaAuthUrl = `https://www.strava.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&approval_prompt=auto&scope=read,activity:read_all`
 
   const totalDistanceKm = (rides.reduce((acc, r) => acc + (r.distance || 0), 0) / 1000).toFixed(1)
   const estimatedSavings = (rides.length * 3.90).toFixed(2)
