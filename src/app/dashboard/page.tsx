@@ -7,7 +7,7 @@ import { supabase } from '../../lib/supabase'
 
 // 注意这里：变量名 MapHover 首字母大写，但内部路径 import(...) 保持小写 maphover，与左侧文件名严格对应
 const MapHover = dynamic<{ polyline: string }>(
-  () => import('../../components/maphover'), 
+  () => import('../../components/MapHover'), 
   { ssr: false }
 )
 
