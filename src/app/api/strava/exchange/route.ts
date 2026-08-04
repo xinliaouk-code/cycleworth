@@ -32,12 +32,16 @@ export async function POST(request: Request) {
     // 3. 先删除该用户的旧记录，再插入新记录
     await supabase.from('strava_connections').delete().eq('user_id', userId)
 
+    // 将 Strava 返回的 Unix 时间戳转换为标准数据库时间格式
+    const expiresAtDate = new Date(data.expires_at * 1000).toISOString()
+
     const { error } = await supabase
       .from('strava_connections')
       .insert({
         user_id: userId,
         access_token: data.access_token,
-        refresh_token: data.refresh_token
+        refresh_token: data.refresh_token,
+        expires_at: expiresAtDate // 补齐必填项
       })
 
     if (error) throw error
