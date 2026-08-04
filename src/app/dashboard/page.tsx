@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { supabase } from '../../lib/supabase'
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
 
 const RideMap = dynamic<{ polyline: string }>(
   () => import('../../components/RideMap'), 
@@ -117,7 +118,7 @@ export default function DashboardPage() {
     }
   }
 
-async function handleSyncInternal(userId: string) {
+  async function handleSyncInternal(userId: string) {
     try {
       const res = await fetch('/api/strava/sync', {
         method: 'POST',
@@ -127,8 +128,7 @@ async function handleSyncInternal(userId: string) {
       const result = await res.json()
 
       if (result.success) {
-        // 👉 把这里改成你截图里的新提示信息
-        setSyncMsg(`同步完成！已成功获取最新记录，并自动识别 Custom House / Royal Victoria ⇋ Bank / Old Street 往返通勤路线。`)
+        setSyncMsg('同步完成！已成功获取最新记录，并自动识别 Custom House / Royal Victoria ⇋ Bank / Old Street 往返通勤路线。')
         fetchRides(userId)
       } else {
         setSyncMsg('同步失败：' + (result.error || '未知错误'))
@@ -155,6 +155,36 @@ async function handleSyncInternal(userId: string) {
   const totalDistanceKm = (rides.reduce((acc, r) => acc + (r.distance || 0), 0) / 1000).toFixed(1)
   const commuteRidesCount = rides.filter(r => r.is_commute).length
   const estimatedSavings = (commuteRidesCount * 3.90).toFixed(2)
+
+  // 辅助函数：根据日期获取当周周一的日期作为 Key
+  function getWeekKey(dateStr: string) {
+    const d = new Date(dateStr)
+    const day = d.getDay()
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+    const monday = new Date(d.setDate(diff))
+    return monday.toISOString().substring(0, 10)
+  }
+
+  // 按周聚合数据用于图表
+  const weeklyMap = new Map<string, { distance: number; savings: number; count: number }>()
+  rides.forEach(r => {
+    if (!r.start_date) return
+    const weekKey = getWeekKey(r.start_date)
+    const curr = weeklyMap.get(weekKey) || { distance: 0, savings: 0, count: 0 }
+    curr.distance += (r.distance || 0) / 1000
+    if (r.is_commute) curr.savings += 3.90
+    curr.count += 1
+    weeklyMap.set(weekKey, curr)
+  })
+
+  const chartData = Array.from(weeklyMap.entries())
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([week, val]) => ({
+      shortWeek: week,
+      distance: Number(val.distance.toFixed(1)),
+      savings: Number(val.savings.toFixed(2)),
+      count: val.count
+    }))
 
   return (
     <main className="min-h-screen bg-slate-50 p-4 md:p-8 relative">
@@ -191,7 +221,7 @@ async function handleSyncInternal(userId: string) {
         <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h2 className="text-lg font-semibold text-slate-800">Strava 数据同步</h2>
-            <p className="text-sm text-slate-500 mt-1">点击同步以获取最新的云端骑行记录。</p>
+            <p className="text-sm text-slate-500 mt-1">点击同步以获取最新的云端骑行记录并自动识别通勤。</p>
           </div>
           
           <div className="flex items-center gap-3 w-full md:w-auto">
@@ -215,9 +245,68 @@ async function handleSyncInternal(userId: string) {
         </div>
 
         {syncMsg && (
-          <div className="flex items-center gap-2 text-sm text-sky-700 bg-sky-50 p-4 rounded-2xl border border-sky-100 shadow-sm animate-in fade-in duration-200">
+          <div className="flex items-center gap-2 text-sm text-sky-700 bg-sky-50 p-4 rounded-2xl border border-sky-100 shadow-sm">
             <span className="text-lg">💡</span>
             <p className="font-medium">{syncMsg}</p>
+          </div>
+        )}
+
+        {/* 周度里程与节省金额双指标趋势图 */}
+        {chartData.length > 0 && (
+          <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-800">周度骑行里程与节省开支趋势</h2>
+                <p className="text-sm text-slate-400 mt-0.5">对比每周的总骑行距离 (km) 与 TfL 节省金额 (£)</p>
+              </div>
+              <div className="flex items-center gap-4 text-xs font-medium">
+                <span className="flex items-center gap-1.5 text-sky-600">
+                  <span className="w-3 h-3 rounded-full bg-sky-500 inline-block"></span> 骑行里程 (km)
+                </span>
+                <span className="flex items-center gap-1.5 text-emerald-600">
+                  <span className="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span> 节省开支 (£)
+                </span>
+              </div>
+            </div>
+
+            <div className="w-full h-72 pt-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis 
+                    dataKey="shortWeek" 
+                    tickLine={false} 
+                    axisLine={{ stroke: '#cbd5e1' }} 
+                    tick={{ fill: '#64748b', fontSize: 11 }} 
+                  />
+                  <YAxis 
+                    yAxisId="left"
+                    orientation="left"
+                    tickLine={false} 
+                    axisLine={false} 
+                    tick={{ fill: '#0284c7', fontSize: 12 }} 
+                  />
+                  <YAxis 
+                    yAxisId="right"
+                    orientation="right"
+                    tickLine={false} 
+                    axisLine={false} 
+                    tick={{ fill: '#059669', fontSize: 12 }} 
+                  />
+                  <Tooltip 
+                    cursor={{ fill: '#f8fafc' }}
+                    contentStyle={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    formatter={(value: any, name: any): [string, string] => [
+                      name === 'distance' ? `${value} km` : `£${value}`,
+                      name === 'distance' ? '骑行里程' : '节省开支'
+                    ]}
+                    labelStyle={{ fontWeight: 'bold', color: '#1e293b' }}
+                  />
+                  <Bar yAxisId="left" dataKey="distance" name="distance" fill="#0284c7" radius={[4, 4, 0, 0]} barSize={14} />
+                  <Bar yAxisId="right" dataKey="savings" name="savings" fill="#10b981" radius={[4, 4, 0, 0]} barSize={14} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         )}
 
@@ -285,7 +374,7 @@ async function handleSyncInternal(userId: string) {
         </div>
       </div>
 
-      {/* 统一的点击详情弹窗（电脑端与手机端通用） */}
+      {/* 点击详情弹窗 */}
       {selectedRide && (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/40 backdrop-blur-xs transition-all p-0 md:p-4">
           <div className="bg-white w-full md:w-[480px] rounded-t-3xl md:rounded-2xl p-6 shadow-2xl border border-slate-100 space-y-4 animate-in fade-in slide-in-from-bottom duration-200">
