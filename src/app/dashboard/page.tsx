@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { supabase } from '../../lib/supabase'
 
-// 动态引入全新的地图组件，规避 SSR 和旧缓存
+// 注意这里：变量名 MapHover 首字母大写，但内部路径 import(...) 保持小写 maphover，与左侧文件名严格对应
 const MapHover = dynamic<{ polyline: string }>(
-  () => import('../../components/MapHover'), 
+  () => import('../../components/maphover'), 
   { ssr: false }
 )
 
@@ -269,9 +269,10 @@ export default function DashboardPage() {
           className="fixed pointer-events-none z-50 transform -translate-x-1/2 -translate-y-full mb-3 transition-all duration-75 ease-out"
           style={{ left: `${mousePos.x}px`, top: `${mousePos.y - 10}px` }}
         >
-          {/* 把 RouteMapPreview 改为 MapHover */}
+          {/* 注意这里：标签必须首字母大写 */}
           <MapHover polyline={hoveredRide.summary_polyline} />
         </div>
       )}
     </main>
   )
+}
