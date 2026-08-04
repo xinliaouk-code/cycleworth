@@ -42,7 +42,6 @@ function RouteMapPreview({ polyline }: { polyline: string }) {
   useEffect(() => {
     if (!mapContainerRef.current || !polyline) return
 
-    // 初始化地图实例
     if (!mapInstanceRef.current) {
       const map = L.map(mapContainerRef.current, {
         zoomControl: false,
@@ -54,7 +53,6 @@ function RouteMapPreview({ polyline }: { polyline: string }) {
         keyboard: false,
       })
 
-      // 加载高颜值精美浅色地图底图 (CartoDB Voyager)
       L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         maxZoom: 19,
         subdomains: 'abcd',
@@ -67,32 +65,27 @@ function RouteMapPreview({ polyline }: { polyline: string }) {
     const coords = decodePolyline(polyline)
 
     if (coords.length > 0) {
-      // 清理旧的轨迹图层
       map.eachLayer((layer) => {
         if (layer instanceof L.Polyline) {
           map.removeLayer(layer)
         }
       })
 
-      // 绘制骑行轨迹路线
       const polylineLayer = L.polyline(coords, {
-        color: '#0284c7', // 天蓝色
+        color: '#0284c7',
         weight: 4.5,
         opacity: 0.9,
       }).addTo(map)
 
-      // 自动缩放并居中适配路线
       map.fitBounds(polylineLayer.getBounds(), { padding: [15, 15] })
     }
 
-    // 解决容器大小调整问题
     setTimeout(() => {
       map.invalidateSize()
     }, 50)
 
   }, [polyline])
 
-  // 组件卸载时销毁地图
   useEffect(() => {
     return () => {
       if (mapInstanceRef.current) {
@@ -369,7 +362,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 真实地图路线预览悬浮窗 */}
       {hoveredRide && (
         <div 
           className="fixed pointer-events-none z-50 transform -translate-x-1/2 -translate-y-full mb-3 transition-all duration-75 ease-out"
