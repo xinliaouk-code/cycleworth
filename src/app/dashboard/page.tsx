@@ -85,6 +85,26 @@ export default function DashboardPage() {
     }
   }
 
+  // 核心：点击标签时切换状态并持久化保存到 Supabase
+  async function handleToggleCommute(rideId: string, currentVal: boolean) {
+    const newVal = !currentVal
+
+    // 1. 界面前端先做秒级响应更新
+    setRides(rides.map(r => r.id === rideId ? { ...r, is_commute: newVal } : r))
+
+    // 2. 异步同步保存到 Supabase 数据库
+    const { error } = await supabase
+      .from('rides')
+      .update({ is_commute: newVal })
+      .eq('id', rideId)
+
+    if (error) {
+      console.error('更新通勤状态失败:', error.message)
+      // 如果出错则重新拉取恢复原状
+      if (user) fetchRides(user.id)
+    }
+  }
+
   async function handleSyncInternal(userId: string) {
     try {
       const res = await fetch('/api/strava/sync', {
@@ -121,7 +141,7 @@ export default function DashboardPage() {
 
   const totalDistanceKm = (rides.reduce((acc, r) => acc + (r.distance || 0), 0) / 1000).toFixed(1)
   
-  // 核心优化：只过滤并计算标记为“通勤 (is_commute === true)”的次数来节省开支
+  // 只统计标记为通勤的次数来计算节省开支
   const commuteRidesCount = rides.filter(r => r.is_commute).length
   const estimatedSavings = (commuteRidesCount * 3.90).toFixed(2)
 
@@ -193,19 +213,21 @@ export default function DashboardPage() {
             <div className="divide-y divide-slate-100">
               {rides.map((ride) => (
                 <div key={ride.id} className="py-3.5 flex items-center justify-between text-sm gap-4">
-                  {/* 左侧：名称、时间、通勤/休闲标签 */}
+                  {/* 左侧：名称、时间、可点击切换的通勤/休闲按钮 */}
                   <div className="w-1/3">
                     <div className="flex items-center gap-2">
                       <p className="font-medium text-slate-800 truncate">{ride.name || '无标题骑行'}</p>
-                      {ride.is_commute ? (
-                        <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-md text-[10px] font-medium shrink-0">
-                          上班通勤
-                        </span>
-                      ) : (
-                        <span className="bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded-md text-[10px] font-medium shrink-0">
-                          休闲骑行
-                        </span>
-                      )}
+                      <button
+                        onClick={() => handleToggleCommute(ride.id, ride.is_commute)}
+                        title="点击切换 通勤 / 休闲"
+                        className={`px-2.5 py-0.5 rounded-md text-[10px] font-medium shrink-0 transition cursor-pointer border ${
+                          ride.is_commute 
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' 
+                            : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                        }`}
+                      >
+                        {ride.is_commute ? '上班通勤' : '休闲骑行'}
+                      </button>
                     </div>
                     <p className="text-xs text-slate-400 mt-0.5">
                       {new Date(ride.start_date).toLocaleDateString()} · {Math.round(ride.moving_time / 60)} 分钟
