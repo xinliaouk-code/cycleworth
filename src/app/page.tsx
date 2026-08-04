@@ -4,7 +4,7 @@ export default function Home() {
   
   // 2. 组装 Strava 授权链接 (回调地址指向你的 /api/callback 路由)
   const CLIENT_ID = process.env.NEXT_PUBLIC_STRAVA_CLIENT_ID;
-  const REDIRECT_URI = `${DOMAIN}/api/callback`;
+  const REDIRECT_URI = `${DOMAIN}/api/strava/callback`;
   const stravaAuthUrl = `https://www.strava.com/oauth/authorize?client_id=${CLIENT_ID}&response_type=code&redirect_uri=${REDIRECT_URI}&approval_prompt=force&scope=read,activity:read_all`;
 
   return (
