@@ -30,11 +30,10 @@ export default function DashboardPage() {
   const [rides, setRides] = useState<Ride[]>([])
   const [syncMsg, setSyncMsg] = useState('')
   
-  // 电脑端悬浮状态与位置 Ref（避免频繁触发 State 导致地图重载崩溃）
   const [hoveredRide, setHoveredRide] = useState<Ride | null>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
+  const mouseRef = useRef({ x: 0, y: 0 })
 
-  // 手机端点击弹窗状态
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null)
 
   useEffect(() => {
@@ -163,7 +162,7 @@ export default function DashboardPage() {
     <main 
       className="min-h-screen bg-slate-50 p-4 md:p-8 relative"
       onMouseMove={(e) => {
-        // 直接通过 ref 修改 DOM 样式，不触发 React 重新渲染，保护 Leaflet 地图不崩溃
+        mouseRef.current = { x: e.clientX, y: e.clientY }
         if (tooltipRef.current) {
           tooltipRef.current.style.left = `${e.clientX}px`
           tooltipRef.current.style.top = `${e.clientY - 10}px`
@@ -243,10 +242,16 @@ export default function DashboardPage() {
                 <div 
                   key={ride.id} 
                   className="py-4 flex flex-col md:flex-row md:items-center justify-between text-sm gap-4 hover:bg-slate-50/80 px-2 md:px-3 rounded-xl transition cursor-pointer"
-                  onMouseEnter={() => setHoveredRide(ride)}
+                  onMouseEnter={() => {
+                    // 核心修复：鼠标移入时立即捕获当前坐标并赋值给悬浮窗 DOM，防止初次渲染位置不对
+                    if (tooltipRef.current) {
+                      tooltipRef.current.style.left = `${mouseRef.current.x}px`
+                      tooltipRef.current.style.top = `${mouseRef.current.y - 10}px`
+                    }
+                    setHoveredRide(ride)
+                  }}
                   onMouseLeave={() => setHoveredRide(null)}
                   onClick={() => {
-                    // 仅在手机端（小于 768px）点击时触发底部弹窗，电脑端保持 Hover
                     if (window.innerWidth < 768) {
                       setSelectedRide(ride)
                     }
@@ -303,7 +308,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 电脑端悬浮地图 (通过 ref 控制坐标，彻底解决地图高频重建崩溃问题) */}
+      {/* 电脑端悬浮地图 */}
       {hoveredRide && (
         <div 
           ref={tooltipRef}
