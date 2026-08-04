@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-// 伦敦全境交通枢纽坐标库（包含所有 Jubilee 线、Elizabeth 线、DLR 站点及核心地铁站）
 const TUBE_STATIONS = [
   // --- Jubilee Line ---
   { name: "Stanmore", lat: 51.6195, lng: -0.3041 },
@@ -72,7 +71,7 @@ const TUBE_STATIONS = [
   { name: "Woolwich", lat: 51.4912, lng: 0.0736 },
   { name: "Custom House", lat: 51.5106, lng: 0.0234 },
 
-  // --- DLR (Docklands Light Railway) ---
+  // --- DLR ---
   { name: "Bank", lat: 51.5134, lng: -0.0890 },
   { name: "Shadwell", lat: 51.5113, lng: -0.0573 },
   { name: "Limehouse", lat: 51.5131, lng: -0.0396 },
@@ -202,38 +201,81 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '从 Strava 获取数据失败', details: activities }, { status: 500 })
     }
 
-    const ridesToInsert = activities
-      .filter((act: any) => act.type === 'Ride' || act.type === 'EBikeRide')
-      .map((act: any) => {
-        const startLat = act.start_latlng?.[0]
-        const startLng = act.start_latlng?.[1]
-        const endLat = act.end_latlng?.[0]
-        const endLng = act.end_latlng?.[1]
+    // 1. 获取数据库中现有的所有记录，用于双重匹配
+    const { data: existingRides } = await supabase
+      .from('rides')
+      .select('id, strava_activity_id, name, start_date')
+      .eq('user_id', userId)
 
-        return {
-          user_id: userId,
-          strava_activity_id: act.id,
-          name: act.name,
-          distance: act.distance,
-          moving_time: act.moving_time,
-          elapsed_time: act.elapsed_time,
-          type: act.type,
-          start_date: act.start_date,
-          is_commute: act.commute || false,
-          start_station: getNearestStation(startLat, startLng),
-          end_station: getNearestStation(endLat, endLng)
+    const existingByActivityId = new Map<number, any>()
+    const existingByKey = new Map<string, any>()
+
+    if (existingRides) {
+      existingRides.forEach((r: any) => {
+        if (r.strava_activity_id != null) {
+          existingByActivityId.set(r.strava_activity_id, r)
+        }
+        if (r.name && r.start_date) {
+          existingByKey.set(`${r.name}_${r.start_date}`, r)
         }
       })
-
-    if (ridesToInsert.length > 0) {
-      const { error: insertError } = await supabase
-        .from('rides')
-        .upsert(ridesToInsert, { onConflict: 'strava_activity_id' })
-
-      if (insertError) throw insertError
     }
 
-    return NextResponse.json({ success: true, count: ridesToInsert.length })
+    let syncedCount = 0
+
+    // 2. 遍历 Strava 活动：匹配则精确更新元数据（绝对不碰 is_commute），不匹配则插入新记录
+    for (const act of activities) {
+      if (act.type !== 'Ride' && act.type !== 'EBikeRide') continue
+
+      const startLat = act.start_latlng?.[0]
+      const startLng = act.start_latlng?.[1]
+      const endLat = act.end_latlng?.[0]
+      const endLng = act.end_latlng?.[1]
+
+      const startStation = getNearestStation(startLat, startLng)
+      const endStation = getNearestStation(endLat, endLng)
+
+      const fallbackKey = `${act.name}_${act.start_date}`
+      const matchedRecord = existingByActivityId.get(act.id) || existingByKey.get(fallbackKey)
+
+      if (matchedRecord) {
+        // 更新现有记录：明确不包含 is_commute 字段，保护用户的个性化选择
+        await supabase
+          .from('rides')
+          .update({
+            name: act.name,
+            distance: act.distance,
+            moving_time: act.moving_time,
+            elapsed_time: act.elapsed_time,
+            type: act.type,
+            start_date: act.start_date,
+            start_station: startStation,
+            end_station: endStation,
+            strava_activity_id: act.id
+          })
+          .eq('id', matchedRecord.id)
+      } else {
+        // 插入全新记录
+        await supabase
+          .from('rides')
+          .insert({
+            user_id: userId,
+            strava_activity_id: act.id,
+            name: act.name,
+            distance: act.distance,
+            moving_time: act.moving_time,
+            elapsed_time: act.elapsed_time,
+            type: act.type,
+            start_date: act.start_date,
+            is_commute: act.commute || false,
+            start_station: startStation,
+            end_station: endStation
+          })
+      }
+      syncedCount++
+    }
+
+    return NextResponse.json({ success: true, count: syncedCount })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
