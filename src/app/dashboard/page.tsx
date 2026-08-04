@@ -31,12 +31,11 @@ export default function DashboardPage() {
   const [rides, setRides] = useState<Ride[]>([])
   const [syncMsg, setSyncMsg] = useState('')
   
-  // 模块折叠状态管理 (false 表示展开，true 表示收起)
+  // 模块折叠状态管理
   const [collapseSync, setCollapseSync] = useState(false)
   const [collapseChart, setCollapseChart] = useState(false)
   const [collapseRides, setCollapseRides] = useState(false)
 
-  // 统一的点击弹窗状态
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null)
 
   useEffect(() => {
@@ -161,7 +160,6 @@ export default function DashboardPage() {
   const commuteRidesCount = rides.filter(r => r.is_commute).length
   const estimatedSavings = (commuteRidesCount * 3.90).toFixed(2)
 
-  // 按周聚合数据用于图表
   function getWeekKey(dateStr: string) {
     const d = new Date(dateStr)
     const day = d.getDay()
@@ -191,9 +189,9 @@ export default function DashboardPage() {
     }))
 
   return (
-    <main className="min-h-screen bg-slate-50 p-4 md:p-8 relative">
-      <div className="max-w-4xl mx-auto mt-4 md:mt-8 space-y-6">
-        <div className="flex items-center justify-between">
+    <main className="min-h-screen bg-slate-50 px-2 py-4 md:p-8 relative">
+      <div className="max-w-4xl mx-auto space-y-4 md:space-y-6">
+        <div className="flex items-center justify-between px-1">
           <div>
             <h1 className="text-2xl font-bold text-slate-800 tracking-tight">
               CycleWorth
@@ -207,25 +205,25 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-            <p className="text-sm font-medium text-slate-400">总骑行次数</p>
-            <p className="text-3xl font-bold text-slate-800 mt-2">{rides.length} <span className="text-sm font-normal text-slate-500">次</span></p>
+        <div className="grid grid-cols-3 gap-2 md:gap-4">
+          <div className="bg-white p-3.5 md:p-6 rounded-2xl shadow-sm border border-slate-100">
+            <p className="text-xs md:text-sm font-medium text-slate-400">总骑行次数</p>
+            <p className="text-xl md:text-3xl font-bold text-slate-800 mt-1 md:mt-2">{rides.length} <span className="text-xs md:text-sm font-normal text-slate-500">次</span></p>
           </div>
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-            <p className="text-sm font-medium text-slate-400">总骑行距离</p>
-            <p className="text-3xl font-bold text-slate-800 mt-2">{totalDistanceKm} <span className="text-sm font-normal text-slate-500">km</span></p>
+          <div className="bg-white p-3.5 md:p-6 rounded-2xl shadow-sm border border-slate-100">
+            <p className="text-xs md:text-sm font-medium text-slate-400">总骑行距离</p>
+            <p className="text-xl md:text-3xl font-bold text-slate-800 mt-1 md:mt-2">{totalDistanceKm} <span className="text-xs md:text-sm font-normal text-slate-500">km</span></p>
           </div>
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 bg-gradient-to-br from-sky-50 to-white">
-            <p className="text-sm font-medium text-sky-600">已节省交通开支 (TfL · 仅通勤)</p>
-            <p className="text-3xl font-bold text-sky-700 mt-2">£{estimatedSavings}</p>
+          <div className="bg-white p-3.5 md:p-6 rounded-2xl shadow-sm border border-slate-100 bg-gradient-to-br from-sky-50 to-white">
+            <p className="text-xs md:text-sm font-medium text-sky-600">已节省开支</p>
+            <p className="text-xl md:text-3xl font-bold text-sky-700 mt-1 md:mt-2">£{estimatedSavings}</p>
           </div>
         </div>
 
         {/* 1. Strava 数据同步模块 */}
-        <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4 transition-all">
+        <div className="bg-white p-3.5 md:p-6 rounded-2xl shadow-sm border border-slate-100 space-y-3 transition-all">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2">
               <button 
                 onClick={() => setCollapseSync(!collapseSync)}
                 className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold flex items-center justify-center text-xs transition cursor-pointer"
@@ -233,23 +231,23 @@ export default function DashboardPage() {
               >
                 {collapseSync ? '+' : '−'}
               </button>
-              <h2 className="text-lg font-semibold text-slate-800">Strava 数据同步</h2>
+              <h2 className="text-base md:text-lg font-semibold text-slate-800">Strava 数据同步</h2>
             </div>
             {!collapseSync && (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 {isConnected ? (
-                  <span className="text-center px-4 py-2 bg-green-50 text-green-700 font-medium text-xs rounded-xl border border-green-200">
+                  <span className="text-center px-3 py-1.5 bg-green-50 text-green-700 font-medium text-xs rounded-xl border border-green-200">
                     ✓ 已连接
                   </span>
                 ) : (
-                  <a href={stravaAuthUrl} className="text-center px-4 py-2 bg-[#FC4C02] text-white text-xs font-medium rounded-xl hover:bg-[#E34402]">
+                  <a href={stravaAuthUrl} className="text-center px-3 py-1.5 bg-[#FC4C02] text-white text-xs font-medium rounded-xl hover:bg-[#E34402]">
                     连接 Strava
                   </a>
                 )}
                 <button
                   onClick={handleSync}
                   disabled={isSyncing}
-                  className="text-center px-4 py-2 bg-sky-600 text-white text-xs font-medium rounded-xl hover:bg-sky-700 disabled:opacity-50 cursor-pointer"
+                  className="text-center px-3 py-1.5 bg-sky-600 text-white text-xs font-medium rounded-xl hover:bg-sky-700 disabled:opacity-50 cursor-pointer"
                 >
                   {isSyncing ? '同步中...' : '同步记录'}
                 </button>
@@ -258,22 +256,22 @@ export default function DashboardPage() {
           </div>
 
           {!collapseSync && (
-            <p className="text-sm text-slate-500">点击同步以获取最新的云端骑行记录并自动识别通勤。</p>
+            <p className="text-xs md:text-sm text-slate-500">点击同步以获取最新的云端骑行记录并自动识别通勤。</p>
           )}
         </div>
 
         {syncMsg && (
-          <div className="flex items-center gap-2 text-sm text-sky-700 bg-sky-50 p-4 rounded-2xl border border-sky-100 shadow-sm">
-            <span className="text-lg">💡</span>
+          <div className="flex items-center gap-2 text-xs md:text-sm text-sky-700 bg-sky-50 p-3.5 rounded-2xl border border-sky-100 shadow-sm">
+            <span className="text-base">💡</span>
             <p className="font-medium">{syncMsg}</p>
           </div>
         )}
 
         {/* 2. 周度里程与节省金额双指标趋势图模块 */}
         {chartData.length > 0 && (
-          <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4 transition-all">
+          <div className="bg-white p-3.5 md:p-6 rounded-2xl shadow-sm border border-slate-100 space-y-3 transition-all">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2">
                 <button 
                   onClick={() => setCollapseChart(!collapseChart)}
                   className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold flex items-center justify-center text-xs transition cursor-pointer"
@@ -282,46 +280,46 @@ export default function DashboardPage() {
                   {collapseChart ? '+' : '−'}
                 </button>
                 <div>
-                  <h2 className="text-lg font-semibold text-slate-800">周度骑行里程与节省开支趋势</h2>
-                  {!collapseChart && <p className="text-sm text-slate-400 mt-0.5">对比每周的总骑行距离 (km) 与 TfL 节省金额 (£)</p>}
+                  <h2 className="text-base md:text-lg font-semibold text-slate-800">周度骑行里程与节省开支趋势</h2>
+                  {!collapseChart && <p className="text-xs md:text-sm text-slate-400 mt-0.5">对比每周的总骑行距离 (km) 与 TfL 节省金额 (£)</p>}
                 </div>
               </div>
               {!collapseChart && (
-                <div className="flex items-center gap-4 text-xs font-medium">
-                  <span className="flex items-center gap-1.5 text-sky-600">
-                    <span className="w-3 h-3 rounded-full bg-sky-500 inline-block"></span> 骑行里程 (km)
+                <div className="flex items-center gap-3 text-[11px] md:text-xs font-medium">
+                  <span className="flex items-center gap-1 text-sky-600">
+                    <span className="w-2.5 h-2.5 rounded-full bg-sky-500 inline-block"></span> 里程 (km)
                   </span>
-                  <span className="flex items-center gap-1.5 text-emerald-600">
-                    <span className="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span> 节省开支 (£)
+                  <span className="flex items-center gap-1 text-emerald-600">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span> 开支 (£)
                   </span>
                 </div>
               )}
             </div>
 
             {!collapseChart && (
-              <div className="w-full h-72 pt-2">
+              <div className="w-full h-64 md:h-72 pt-1">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                  <BarChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                     <XAxis 
                       dataKey="shortWeek" 
                       tickLine={false} 
                       axisLine={{ stroke: '#cbd5e1' }} 
-                      tick={{ fill: '#64748b', fontSize: 11 }} 
+                      tick={{ fill: '#64748b', fontSize: 10 }} 
                     />
                     <YAxis 
                       yAxisId="left"
                       orientation="left"
                       tickLine={false} 
                       axisLine={false} 
-                      tick={{ fill: '#0284c7', fontSize: 12 }} 
+                      tick={{ fill: '#0284c7', fontSize: 10 }} 
                     />
                     <YAxis 
                       yAxisId="right"
                       orientation="right"
                       tickLine={false} 
                       axisLine={false} 
-                      tick={{ fill: '#059669', fontSize: 12 }} 
+                      tick={{ fill: '#059669', fontSize: 10 }} 
                     />
                     <Tooltip 
                       cursor={{ fill: '#f8fafc' }}
@@ -332,8 +330,8 @@ export default function DashboardPage() {
                       ]}
                       labelStyle={{ fontWeight: 'bold', color: '#1e293b' }}
                     />
-                    <Bar yAxisId="left" dataKey="distance" name="distance" fill="#0284c7" radius={[4, 4, 0, 0]} barSize={14} />
-                    <Bar yAxisId="right" dataKey="savings" name="savings" fill="#10b981" radius={[4, 4, 0, 0]} barSize={14} />
+                    <Bar yAxisId="left" dataKey="distance" name="distance" fill="#0284c7" radius={[4, 4, 0, 0]} barSize={12} />
+                    <Bar yAxisId="right" dataKey="savings" name="savings" fill="#10b981" radius={[4, 4, 0, 0]} barSize={12} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -342,8 +340,8 @@ export default function DashboardPage() {
         )}
 
         {/* 3. 近期骑行明细列表模块 */}
-        <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4 transition-all">
-          <div className="flex items-center gap-2.5">
+        <div className="bg-white p-3.5 md:p-6 rounded-2xl shadow-sm border border-slate-100 space-y-3 transition-all">
+          <div className="flex items-center gap-2">
             <button 
               onClick={() => setCollapseRides(!collapseRides)}
               className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold flex items-center justify-center text-xs transition cursor-pointer"
@@ -351,7 +349,7 @@ export default function DashboardPage() {
             >
               {collapseRides ? '+' : '−'}
             </button>
-            <h2 className="text-lg font-semibold text-slate-800">近期骑行明细</h2>
+            <h2 className="text-base md:text-lg font-semibold text-slate-800">近期骑行明细</h2>
           </div>
           
           {!collapseRides && (
@@ -363,20 +361,20 @@ export default function DashboardPage() {
                   {rides.map((ride) => (
                     <div 
                       key={ride.id} 
-                      className="py-4 flex flex-col md:flex-row md:items-center justify-between text-sm gap-4 hover:bg-slate-50/80 px-2 md:px-3 rounded-xl transition cursor-pointer"
+                      className="py-3 flex flex-col md:flex-row md:items-center justify-between text-sm gap-2 md:gap-4 hover:bg-slate-50/80 px-2 rounded-xl transition cursor-pointer"
                       onClick={() => setSelectedRide(ride)}
                     >
                       <div className="w-full md:w-1/3 flex items-start justify-between md:justify-start gap-2">
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="font-medium text-slate-800 truncate max-w-[140px] md:max-w-[200px]">{ride.name || '无标题骑行'}</p>
+                            <p className="font-medium text-slate-800 text-xs md:text-sm truncate max-w-[140px] md:max-w-[200px]">{ride.name || '无标题骑行'}</p>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
                                 handleToggleCommute(ride.id, ride.is_commute)
                               }}
                               title="点击切换 通勤 / 休闲"
-                              className={`px-2 py-0.5 rounded-md text-[10px] font-medium shrink-0 transition cursor-pointer border ${
+                              className={`px-1.5 py-0.5 rounded-md text-[10px] font-medium shrink-0 transition cursor-pointer border ${
                                 ride.is_commute 
                                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' 
                                   : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
@@ -385,24 +383,24 @@ export default function DashboardPage() {
                               {ride.is_commute ? '上班通勤' : '休闲骑行'}
                             </button>
                           </div>
-                          <p className="text-xs text-slate-400 mt-1">
+                          <p className="text-[11px] text-slate-400 mt-0.5">
                             {new Date(ride.start_date).toLocaleDateString()} · {Math.round(ride.moving_time / 60)} 分钟
                           </p>
                         </div>
                         <div className="md:hidden text-right shrink-0">
-                          <span className="font-bold text-slate-700 text-base">{(ride.distance / 1000).toFixed(1)}</span>
-                          <span className="text-xs text-slate-500 font-medium ml-0.5">km</span>
+                          <span className="font-bold text-slate-700 text-sm">{(ride.distance / 1000).toFixed(1)}</span>
+                          <span className="text-[11px] text-slate-500 font-medium ml-0.5">km</span>
                         </div>
                       </div>
 
                       <div className="w-full md:w-1/3 flex items-center gap-2 text-xs">
-                        <div className="bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl flex-1 truncate">
-                          <span className="text-slate-400 block text-[10px] mb-0.5">起点站</span>
+                        <div className="bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-xl flex-1 truncate">
+                          <span className="text-slate-400 block text-[9px] mb-0.5">起点站</span>
                           <span className="font-semibold text-slate-700 truncate">{ride.start_station || '未知'}</span>
                         </div>
                         <span className="text-slate-400 font-bold">→</span>
-                        <div className="bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl flex-1 truncate">
-                          <span className="text-slate-400 block text-[10px] mb-0.5">终点站</span>
+                        <div className="bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-xl flex-1 truncate">
+                          <span className="text-slate-400 block text-[9px] mb-0.5">终点站</span>
                           <span className="font-semibold text-slate-700 truncate">{ride.end_station || '未知'}</span>
                         </div>
                       </div>
