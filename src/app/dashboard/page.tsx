@@ -28,10 +28,8 @@ export default function DashboardPage() {
       const code = urlParams.get('code')
       
       if (code) {
-        // 如果有 code，自动去换取 Token 并同步
         await handleExchangeCode(code, user.id)
       } else {
-        // 正常加载连接状态和历史骑行
         await checkExistingConnection(user.id)
         await fetchRides(user.id)
       }
@@ -52,9 +50,7 @@ export default function DashboardPage() {
       
       if (res.ok) {
         setIsConnected(true)
-        // 清理掉网址上的 code，保持页面清爽
         window.history.replaceState({}, document.title, '/dashboard')
-        // 换完钥匙后，立即自动同步获取最新骑行数据！
         await handleSyncInternal(userId)
       } else {
         const errData = await res.json()
@@ -124,7 +120,6 @@ export default function DashboardPage() {
 
   const DOMAIN = "https://cycleworth.vercel.app"
   const clientId = process.env.NEXT_PUBLIC_STRAVA_CLIENT_ID
-  // 巧妙的设计：让 Strava 直接跳回 dashboard 页面本身，免去繁琐的 callback 路由死角
   const redirectUri = `${DOMAIN}/dashboard`
   const stravaAuthUrl = `https://www.strava.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&approval_prompt=auto&scope=read,activity:read_all`
 
@@ -199,11 +194,17 @@ export default function DashboardPage() {
             <div className="divide-y divide-slate-100">
               {rides.map((ride) => (
                 <div key={ride.id} className="py-3 flex items-center justify-between text-sm">
-                  <div>
+                  <div className="space-y-1">
                     <p className="font-medium text-slate-800">{ride.name || '无标题骑行'}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">
+                    <p className="text-xs text-slate-400">
                       {new Date(ride.start_date).toLocaleDateString()} · {Math.round(ride.moving_time / 60)} 分钟
                     </p>
+                    {/* 地铁站起终点标签 */}
+                    <div className="flex items-center gap-2 text-xs text-slate-600 font-medium mt-1">
+                      <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-700">📍 起点: {ride.start_station || '未知'}</span>
+                      <span>→</span>
+                      <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-700">🏁 终点: {ride.end_station || '未知'}</span>
+                    </div>
                   </div>
                   <div className="text-right">
                     <span className="font-semibold text-slate-700">{(ride.distance / 1000).toFixed(2)} km</span>
