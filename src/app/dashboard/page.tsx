@@ -236,13 +236,17 @@ export default function DashboardPage() {
             <div className="divide-y divide-slate-100">
               {rides.map((ride) => (
                 <div 
-                  key={ride.id} 
-                  // 电脑端保留 hover，手机端增加 onClick 触发底部弹窗
-                  className="py-4 flex flex-col md:flex-row md:items-center justify-between text-sm gap-4 hover:bg-slate-50/80 px-2 md:px-3 rounded-xl transition cursor-pointer"
-                  onMouseEnter={() => setHoveredRide(ride)}
-                  onMouseLeave={() => setHoveredRide(null)}
-                  onClick={() => setSelectedRide(ride)}
-                >
+  key={ride.id} 
+  className="py-4 flex flex-col md:flex-row md:items-center justify-between text-sm gap-4 hover:bg-slate-50/80 px-2 md:px-3 rounded-xl transition cursor-pointer"
+  onMouseEnter={() => setHoveredRide(ride)}
+  onMouseLeave={() => setHoveredRide(null)}
+  onClick={() => {
+    // 核心优化：只有在移动端（屏幕宽度小于 768px）点击时才弹出抽屉，电脑端完全保留 Hover 悬停
+    if (window.innerWidth < 768) {
+      setSelectedRide(ride)
+    }
+  }}
+>
                   <div className="w-full md:w-1/3 flex items-start justify-between md:justify-start gap-2">
                     <div>
                       <div className="flex items-center gap-2">
