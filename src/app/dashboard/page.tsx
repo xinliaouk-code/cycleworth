@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { supabase } from '../../lib/supabase'
@@ -30,9 +30,9 @@ export default function DashboardPage() {
   const [rides, setRides] = useState<Ride[]>([])
   const [syncMsg, setSyncMsg] = useState('')
   
-  // 电脑端悬浮状态
+  // 电脑端悬浮状态与位置 Ref（避免频繁触发 State 导致地图重载崩溃）
   const [hoveredRide, setHoveredRide] = useState<Ride | null>(null)
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
+  const tooltipRef = useRef<HTMLDivElement>(null)
 
   // 手机端点击弹窗状态
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null)
@@ -162,7 +162,13 @@ export default function DashboardPage() {
   return (
     <main 
       className="min-h-screen bg-slate-50 p-4 md:p-8 relative"
-      onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
+      onMouseMove={(e) => {
+        // 直接通过 ref 修改 DOM 样式，不触发 React 重新渲染，保护 Leaflet 地图不崩溃
+        if (tooltipRef.current) {
+          tooltipRef.current.style.left = `${e.clientX}px`
+          tooltipRef.current.style.top = `${e.clientY - 10}px`
+        }
+      }}
     >
       <div className="max-w-4xl mx-auto mt-4 md:mt-8 space-y-6">
         <div className="flex items-center justify-between">
@@ -240,6 +246,7 @@ export default function DashboardPage() {
                   onMouseEnter={() => setHoveredRide(ride)}
                   onMouseLeave={() => setHoveredRide(null)}
                   onClick={() => {
+                    // 仅在手机端（小于 768px）点击时触发底部弹窗，电脑端保持 Hover
                     if (window.innerWidth < 768) {
                       setSelectedRide(ride)
                     }
@@ -296,11 +303,11 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 电脑端悬浮地图 */}
+      {/* 电脑端悬浮地图 (通过 ref 控制坐标，彻底解决地图高频重建崩溃问题) */}
       {hoveredRide && (
         <div 
+          ref={tooltipRef}
           className="fixed pointer-events-none z-50 transform -translate-x-1/2 -translate-y-full mb-3 transition-all duration-75 ease-out hidden md:block"
-          style={{ left: `${mousePos.x}px`, top: `${mousePos.y - 10}px` }}
         >
           <RideMap polyline={hoveredRide.summary_polyline} />
         </div>
