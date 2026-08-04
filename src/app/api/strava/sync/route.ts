@@ -201,7 +201,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '从 Strava 获取数据失败', details: activities }, { status: 500 })
     }
 
-    // 1. 获取数据库中现有的所有记录，用于双重匹配
     const { data: existingRides } = await supabase
       .from('rides')
       .select('id, strava_activity_id, name, start_date')
@@ -223,7 +222,6 @@ export async function POST(request: Request) {
 
     let syncedCount = 0
 
-    // 2. 遍历 Strava 活动：匹配则精确更新元数据（绝对不碰 is_commute），不匹配则插入新记录
     for (const act of activities) {
       if (act.type !== 'Ride' && act.type !== 'EBikeRide') continue
 
@@ -234,12 +232,12 @@ export async function POST(request: Request) {
 
       const startStation = getNearestStation(startLat, startLng)
       const endStation = getNearestStation(endLat, endLng)
+      const summaryPolyline = act.map?.summary_polyline || null
 
       const fallbackKey = `${act.name}_${act.start_date}`
       const matchedRecord = existingByActivityId.get(act.id) || existingByKey.get(fallbackKey)
 
       if (matchedRecord) {
-        // 更新现有记录：明确不包含 is_commute 字段，保护用户的个性化选择
         await supabase
           .from('rides')
           .update({
@@ -251,11 +249,11 @@ export async function POST(request: Request) {
             start_date: act.start_date,
             start_station: startStation,
             end_station: endStation,
+            summary_polyline: summaryPolyline,
             strava_activity_id: act.id
           })
           .eq('id', matchedRecord.id)
       } else {
-        // 插入全新记录
         await supabase
           .from('rides')
           .insert({
@@ -269,7 +267,8 @@ export async function POST(request: Request) {
             start_date: act.start_date,
             is_commute: act.commute || false,
             start_station: startStation,
-            end_station: endStation
+            end_station: endStation,
+            summary_polyline: summaryPolyline
           })
       }
       syncedCount++

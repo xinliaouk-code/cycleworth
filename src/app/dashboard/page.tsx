@@ -4,6 +4,82 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 
+// Google Polyline 解码函数
+function decodePolyline(encoded: string) {
+  let points: [number, number][] = []
+  let index = 0, len = encoded.length
+  let lat = 0, lng = 0
+  while (index < len) {
+    let b, shift = 0, result = 0
+    do {
+      b = encoded.charCodeAt(index++) - 63
+      result |= (b & 0x1f) << shift
+      shift += 5
+    } while (b >= 0x20)
+    let dlat = ((result & 1) ? ~(result >> 1) : (result >> 1))
+    lat += dlat
+    shift = 0
+    result = 0
+    do {
+      b = encoded.charCodeAt(index++) - 63
+      result |= (b & 0x1f) << shift
+      shift += 5
+    } while (b >= 0x20)
+    let dlng = ((result & 1) ? ~(result >> 1) : (result >> 1))
+    lng += dlng
+    points.push([lat / 1e5, lng / 1e5])
+  }
+  return points
+}
+
+// 路线缩略图组件
+function RouteMapPreview({ polyline }: { polyline: string }) {
+  if (!polyline) {
+    return <div className="text-xs text-slate-400 flex items-center justify-center h-32">暂无轨迹数据</div>
+  }
+  const coords = decodePolyline(polyline)
+  if (coords.length === 0) {
+    return <div className="text-xs text-slate-400 flex items-center justify-center h-32">轨迹解析失败</div>
+  }
+
+  let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity
+  coords.forEach(([lat, lng]) => {
+    if (lat < minLat) minLat = lat
+    if (lat > maxLat) maxLat = lat
+    if (lng < minLng) minLng = lng
+    if (lng > maxLng) maxLng = lng
+  })
+
+  const width = 240
+  const height = 140
+  const padding = 20
+
+  const latRange = maxLat - minLat || 0.0001
+  const lngRange = maxLng - minLng || 0.0001
+
+  const pointsStr = coords.map(([lat, lng]) => {
+    const x = padding + ((lng - minLng) / lngRange) * (width - padding * 2)
+    const y = height - (padding + ((lat - minLat) / latRange) * (height - padding * 2))
+    return `${x},${y}`
+  }).join(' ')
+
+  return (
+    <div className="bg-slate-900 rounded-2xl p-2 shadow-xl border border-slate-800">
+      <p className="text-[10px] text-slate-400 px-2 pt-1 font-medium mb-1">🗺️ 路线轨迹预览</p>
+      <svg width={width} height={height} className="rounded-xl bg-slate-950 overflow-hidden">
+        <polyline
+          fill="none"
+          stroke="#38bdf8"
+          strokeWidth="3.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          points={pointsStr}
+        />
+      </svg>
+    </div>
+  )
+}
+
 export default function DashboardPage() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
@@ -11,21 +87,20 @@ export default function DashboardPage() {
   const [isSyncing, setIsSyncing] = useState(false)
   const [rides, setRides] = useState<any[]>([])
   const [syncMsg, setSyncMsg] = useState('')
+  const [hoveredRide, setHoveredRide] = useState<any>(null)
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
 
   useEffect(() => {
     async function init() {
       const { data: { user } } = await supabase.auth.getUser()
-      
       if (!user) {
         router.push('/login')
         return
       }
-      
       setUser(user)
 
       const urlParams = new URLSearchParams(window.location.search)
       const code = urlParams.get('code')
-      
       if (code) {
         await handleExchangeCode(code, user.id)
       } else {
@@ -45,7 +120,6 @@ export default function DashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code, userId })
       })
-      
       if (res.ok) {
         setIsConnected(true)
         window.history.replaceState({}, document.title, '/dashboard')
@@ -67,7 +141,6 @@ export default function DashboardPage() {
       .select('id')
       .eq('user_id', userId)
       .maybeSingle()
-    
     if (data) {
       setIsConnected(true)
     }
@@ -87,9 +160,7 @@ export default function DashboardPage() {
 
   async function handleToggleCommute(rideId: string, currentVal: boolean) {
     const newVal = !currentVal
-
     setRides(rides.map(r => r.id === rideId ? { ...r, is_commute: newVal } : r))
-
     const { error } = await supabase
       .from('rides')
       .update({ is_commute: newVal })
@@ -140,9 +211,11 @@ export default function DashboardPage() {
   const estimatedSavings = (commuteRidesCount * 3.90).toFixed(2)
 
   return (
-    <main className="min-h-screen bg-slate-50 p-8">
+    <main 
+      className="min-h-screen bg-slate-50 p-8 relative"
+      onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
+    >
       <div className="max-w-4xl mx-auto mt-8 space-y-6">
-        {/* 极简页头：CycleWorth 与 Every ride has value. */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-800 tracking-tight">
@@ -212,8 +285,12 @@ export default function DashboardPage() {
           ) : (
             <div className="divide-y divide-slate-100">
               {rides.map((ride) => (
-                <div key={ride.id} className="py-3.5 flex items-center justify-between text-sm gap-4">
-                  {/* 左侧：名称、时间、可点击切换的通勤/休闲按钮 */}
+                <div 
+                  key={ride.id} 
+                  className="py-3.5 flex items-center justify-between text-sm gap-4 hover:bg-slate-50/80 px-3 rounded-xl transition cursor-default"
+                  onMouseEnter={() => setHoveredRide(ride)}
+                  onMouseLeave={() => setHoveredRide(null)}
+                >
                   <div className="w-1/3">
                     <div className="flex items-center gap-2">
                       <p className="font-medium text-slate-800 truncate">{ride.name || '无标题骑行'}</p>
@@ -234,7 +311,6 @@ export default function DashboardPage() {
                     </p>
                   </div>
 
-                  {/* 中间：起点和终点地铁站 */}
                   <div className="w-1/3 flex items-center gap-2 text-xs">
                     <div className="bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-xl flex-1 truncate">
                       <span className="text-slate-400 block text-[10px]">起点站</span>
@@ -247,7 +323,6 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  {/* 右侧：距离 */}
                   <div className="w-1/6 text-right">
                     <span className="font-semibold text-slate-700">{(ride.distance / 1000).toFixed(2)} km</span>
                   </div>
@@ -257,6 +332,16 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* 悬浮跟随鼠标的地图路线预览窗口 */}
+      {hoveredRide && (
+        <div 
+          className="fixed pointer-events-none z-50 transform -translate-x-1/2 -translate-y-full mb-3 transition-all duration-75 ease-out"
+          style={{ left: `${mousePos.x}px`, top: `${mousePos.y - 10}px` }}
+        >
+          <RouteMapPreview polyline={hoveredRide.summary_polyline} />
+        </div>
+      )}
     </main>
   )
 }
