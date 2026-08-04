@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { supabase } from '../../lib/supabase'
 
-// 动态引入地图组件，彻底规避 SSR window is not defined 报错
-const RouteMapPreview = dynamic<{ polyline: string }>(
-  () => import('../../components/RouteMapPreview'), 
+// 动态引入全新的地图组件，规避 SSR 和旧缓存
+const MapHover = dynamic<{ polyline: string }>(
+  () => import('../../components/MapHover'), 
   { ssr: false }
 )
 
@@ -269,9 +269,9 @@ export default function DashboardPage() {
           className="fixed pointer-events-none z-50 transform -translate-x-1/2 -translate-y-full mb-3 transition-all duration-75 ease-out"
           style={{ left: `${mousePos.x}px`, top: `${mousePos.y - 10}px` }}
         >
-          <RouteMapPreview polyline={hoveredRide.summary_polyline} />
+          {/* 把 RouteMapPreview 改为 MapHover */}
+          <MapHover polyline={hoveredRide.summary_polyline} />
         </div>
       )}
     </main>
   )
-}
