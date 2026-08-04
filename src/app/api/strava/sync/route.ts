@@ -155,14 +155,15 @@ export async function POST(request: Request) {
 
     let currentAccessToken = conn.access_token
 
-    let stravaRes = await fetch(
-      'https://www.strava.com/api/v3/athlete/activities?per_page=30',
+    // 先测试一次请求，如果 401 则刷新 Token
+    let testRes = await fetch(
+      'https://www.strava.com/api/v3/athlete/activities?per_page=1',
       {
         headers: { Authorization: `Bearer ${currentAccessToken}` }
       }
     )
 
-    if (stravaRes.status === 401 && conn.refresh_token) {
+    if (testRes.status === 401 && conn.refresh_token) {
       const refreshRes = await fetch('https://www.strava.com/oauth/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -185,22 +186,48 @@ export async function POST(request: Request) {
             refresh_token: refreshData.refresh_token || conn.refresh_token,
           })
           .eq('user_id', userId)
-
-        stravaRes = await fetch(
-          'https://www.strava.com/api/v3/athlete/activities?per_page=30',
-          {
-            headers: { Authorization: `Bearer ${currentAccessToken}` }
-          }
-        )
       }
     }
 
-    const activities = await stravaRes.json()
+    // -------------------------------------------------------------------------
+    // 核心修改：通过 while 循环进行分页拉取，直到把 Strava 所有历史活动拉完
+    // -------------------------------------------------------------------------
+    let page = 1
+    const perPage = 100 // 每页拉取 100 条（Strava 支持最大 200）
+    let allActivities: any[] = []
 
-    if (!Array.isArray(activities)) {
-      return NextResponse.json({ error: '从 Strava 获取数据失败', details: activities }, { status: 500 })
+    while (true) {
+      const stravaRes = await fetch(
+        `https://www.strava.com/api/v3/athlete/activities?page=${page}&per_page=${perPage}`,
+        {
+          headers: { Authorization: `Bearer ${currentAccessToken}` }
+        }
+      )
+
+      if (!stravaRes.ok) {
+        break
+      }
+
+      const activities = await stravaRes.json()
+      if (!Array.isArray(activities) || activities.length === 0) {
+        break // 没有更多数据了，跳出循环
+      }
+
+      allActivities = allActivities.concat(activities)
+
+      // 如果当前页返回的数量小于 perPage，说明已经是最后一页了
+      if (activities.length < perPage) {
+        break
+      }
+
+      page++
     }
 
+    if (allActivities.length === 0) {
+      return NextResponse.json({ success: true, count: 0, message: '没有获取到任何 Strava 活动' })
+    }
+
+    // 获取数据库中已存在的记录，用于比对更新或插入
     const { data: existingRides } = await supabase
       .from('rides')
       .select('id, strava_activity_id, name, start_date')
@@ -222,7 +249,7 @@ export async function POST(request: Request) {
 
     let syncedCount = 0
 
-    for (const act of activities) {
+    for (const act of allActivities) {
       if (act.type !== 'Ride' && act.type !== 'EBikeRide') continue
 
       const startLat = act.start_latlng?.[0]
