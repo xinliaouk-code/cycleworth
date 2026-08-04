@@ -5,13 +5,12 @@ import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { supabase } from '../../lib/supabase'
 
-// 1. 换用全新的名字 RideMap，彻底绕开之前的 Git 大小写缓存陷阱
+// 动态引入地图组件
 const RideMap = dynamic<{ polyline: string }>(
   () => import('../../components/RideMap'), 
   { ssr: false }
 )
 
-// 2. TypeScript 接口定义
 type Ride = {
   id: string;
   name: string;
@@ -31,8 +30,13 @@ export default function DashboardPage() {
   const [isSyncing, setIsSyncing] = useState(false)
   const [rides, setRides] = useState<Ride[]>([])
   const [syncMsg, setSyncMsg] = useState('')
+  
+  // 电脑端悬浮状态
   const [hoveredRide, setHoveredRide] = useState<Ride | null>(null)
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
+
+  // 手机端点击弹窗状态 (方案一：底部抽屉弹窗)
+  const [selectedRide, setSelectedRide] = useState<Ride | null>(null)
 
   useEffect(() => {
     async function init() {
@@ -233,16 +237,21 @@ export default function DashboardPage() {
               {rides.map((ride) => (
                 <div 
                   key={ride.id} 
-                  className="py-4 flex flex-col md:flex-row md:items-center justify-between text-sm gap-4 hover:bg-slate-50/80 px-2 md:px-3 rounded-xl transition cursor-default"
+                  // 电脑端保留 hover，手机端增加 onClick 触发底部弹窗
+                  className="py-4 flex flex-col md:flex-row md:items-center justify-between text-sm gap-4 hover:bg-slate-50/80 px-2 md:px-3 rounded-xl transition cursor-pointer"
                   onMouseEnter={() => setHoveredRide(ride)}
                   onMouseLeave={() => setHoveredRide(null)}
+                  onClick={() => setSelectedRide(ride)}
                 >
                   <div className="w-full md:w-1/3 flex items-start justify-between md:justify-start gap-2">
                     <div>
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-slate-800 truncate max-w-[140px] md:max-w-[200px]">{ride.name || '无标题骑行'}</p>
                         <button
-                          onClick={() => handleToggleCommute(ride.id, ride.is_commute)}
+                          onClick={(e) => {
+                            e.stopPropagation() // 防止点击标签时触发整行的 onClick 弹窗
+                            handleToggleCommute(ride.id, ride.is_commute)
+                          }}
                           title="点击切换 通勤 / 休闲"
                           className={`px-2 py-0.5 rounded-md text-[10px] font-medium shrink-0 transition cursor-pointer border ${
                             ride.is_commute 
@@ -285,13 +294,54 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* 电脑端悬浮地图 */}
       {hoveredRide && (
         <div 
           className="fixed pointer-events-none z-50 transform -translate-x-1/2 -translate-y-full mb-3 transition-all duration-75 ease-out hidden md:block"
           style={{ left: `${mousePos.x}px`, top: `${mousePos.y - 10}px` }}
         >
-          {/* 3. 使用全新的大写标签 RideMap */}
           <RideMap polyline={hoveredRide.summary_polyline} />
+        </div>
+      )}
+
+      {/* 手机端点击弹窗 (方案一：底部抽屉 Modal) */}
+      {selectedRide && (
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/40 backdrop-blur-xs transition-all">
+          <div className="bg-white w-full md:w-[420px] rounded-t-3xl md:rounded-2xl p-6 shadow-2xl border border-slate-100 space-y-4 animate-in fade-in slide-in-from-bottom duration-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-slate-800 text-lg truncate max-w-[280px]">
+                  {selectedRide.name || '骑行路线详情'}
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {new Date(selectedRide.start_date).toLocaleDateString()} · {(selectedRide.distance / 1000).toFixed(2)} km
+                </p>
+              </div>
+              <button 
+                onClick={() => setSelectedRide(null)}
+                className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 text-sm font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* 弹窗内的放大版地图 */}
+            <div className="w-full h-64 rounded-2xl overflow-hidden border border-slate-200 relative shadow-inner">
+              <RideMap polyline={selectedRide.summary_polyline} />
+            </div>
+
+            <div className="flex items-center justify-between text-xs text-slate-600 bg-slate-50 p-3.5 rounded-xl border border-slate-100">
+              <div>
+                <span className="text-slate-400 block text-[10px]">起点站</span>
+                <span className="font-semibold text-slate-700">{selectedRide.start_station || '未知'}</span>
+              </div>
+              <span className="text-slate-400 font-bold">→</span>
+              <div>
+                <span className="text-slate-400 block text-[10px]">终点站</span>
+                <span className="font-semibold text-slate-700">{selectedRide.end_station || '未知'}</span>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </main>
