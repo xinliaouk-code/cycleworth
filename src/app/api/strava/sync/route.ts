@@ -131,9 +131,6 @@ function getNearestStation(lat?: number, lng?: number): string {
   return nearest.name
 }
 
-// -----------------------------------------------------------------------------------
-// 全新智能分类判定核心逻辑
-// -----------------------------------------------------------------------------------
 type CommuteSettings = {
   homeStation: string;
   officeStation: string;
@@ -143,22 +140,20 @@ type CommuteSettings = {
   eveningEnd: number;
 }
 
+// -----------------------------------------------------------------------------------
+// 全新分类逻辑：只有“休闲骑行”（原地环线/同起点同终点）不算钱，其他实用骑行均算钱
+// -----------------------------------------------------------------------------------
 function classifyRide(
   startDateStr: string,
   startStation: string,
   endStation: string,
   settings: CommuteSettings
-): { isCommute: boolean; category: string } {
+): { isSavingsEligible: boolean; category: string } {
   const d = new Date(startDateStr)
   const day = d.getDay() // 0 为周日, 6 为周六
   const hour = d.getHours()
+  const isWeekday = day >= 1 && day <= 5
 
-  // 1. 周末骑行判定
-  if (day === 0 || day === 6) {
-    return { isCommute: false, category: '周末骑行' }
-  }
-
-  // 支持中英文逗号分割，拆分成 clean 的小写站点名称数组
   const homeList = settings.homeStation
     .split(/[,，]/)
     .map(s => s.trim().toLowerCase())
@@ -172,7 +167,6 @@ function classifyRide(
   const start = startStation.toLowerCase().trim()
   const end = endStation.toLowerCase().trim()
 
-  // 判断起点/终点是否匹配多站点列表中的任意一个
   const isHomeStart = homeList.some(h => start.includes(h) || h.includes(start))
   const isOfficeEnd = officeList.some(o => end.includes(o) || o.includes(end))
   
@@ -182,26 +176,31 @@ function classifyRide(
   const isMorningTime = hour >= settings.morningStart && hour < settings.morningEnd
   const isEveningTime = hour >= settings.eveningStart && hour < settings.eveningEnd
 
-  // 2. 上班通勤：工作日 + 早高峰时间 + 起点在 Home 列表 + 终点在 Office 列表
-  if (isMorningTime && isHomeStart && isOfficeEnd) {
-    return { isCommute: true, category: '上班通勤' }
+  // 1. 上班通勤（工作日 + 早高峰 + Home ⇋ Office）
+  if (isWeekday && isMorningTime && isHomeStart && isOfficeEnd) {
+    return { isSavingsEligible: true, category: '上班通勤' }
   }
 
-  // 3. 下班通勤：工作日 + 晚高峰时间 + 起点在 Office 列表 + 终点在 Home 列表
-  if (isEveningTime && isOfficeStart && isHomeEnd) {
-    return { isCommute: true, category: '下班通勤' }
+  // 2. 下班通勤（工作日 + 晚高峰 + Office ⇋ Home）
+  if (isWeekday && isEveningTime && isOfficeStart && isHomeEnd) {
+    return { isSavingsEligible: true, category: '下班通勤' }
   }
 
-  // 4. 普通骑行
-  return { isCommute: false, category: '普通骑行' }
+  // 3. 日常交通：只要起点与终点不同（A 到 B 的点对点出行），不论工作日/周末，都属于日常代步（算钱）
+  if (startStation !== endStation && startStation !== '未知起点' && endStation !== '未知起点') {
+    return { isSavingsEligible: true, category: '日常交通' }
+  }
+
+  // 4. 休闲骑行（起点终点相同/环线骑行，不算钱）
+  return { isSavingsEligible: false, category: '休闲骑行' }
 }
 
 export async function POST(request: Request) {
   try {
     const { 
       userId, 
-      homeStation = 'Custom House', 
-      officeStation = 'Bank',
+      homeStation = 'Custom House, Royal Victoria', 
+      officeStation = 'Bank, Old Street',
       morningStart = 7,
       morningEnd = 10,
       eveningStart = 16,
@@ -323,8 +322,7 @@ export async function POST(request: Request) {
       const fallbackKey = `${act.name}_${act.start_date}`
       const matchedRecord = existingByActivityId.get(act.id) || existingByKey.get(fallbackKey)
 
-      // 调用动态判别规则
-      const { isCommute, category } = classifyRide(act.start_date, startStation, endStation, settings)
+      const { isSavingsEligible } = classifyRide(act.start_date, startStation, endStation, settings)
 
       if (matchedRecord) {
         await supabase
@@ -336,7 +334,7 @@ export async function POST(request: Request) {
             elapsed_time: act.elapsed_time,
             type: act.type,
             start_date: act.start_date,
-            is_commute: isCommute,
+            is_commute: isSavingsEligible, // 保存“是否算作省钱/实用交通”
             start_station: startStation,
             end_station: endStation,
             summary_polyline: summaryPolyline,
@@ -355,7 +353,7 @@ export async function POST(request: Request) {
             elapsed_time: act.elapsed_time,
             type: act.type,
             start_date: act.start_date,
-            is_commute: isCommute,
+            is_commute: isSavingsEligible,
             start_station: startStation,
             end_station: endStation,
             summary_polyline: summaryPolyline
