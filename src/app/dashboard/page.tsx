@@ -18,7 +18,8 @@ type Ride = {
   moving_time: number;
   start_date: string;
   is_commute: boolean;
-  category?: string;
+  category?: string; // 三大类别: 通勤骑行 / 日常交通 / 休闲骑行
+  is_manual_override?: boolean;
   start_station?: string;
   end_station?: string;
   summary_polyline: string;
@@ -153,16 +154,43 @@ export default function DashboardPage() {
     }
   }
 
-  async function handleToggleCommute(rideId: string, currentVal: boolean) {
-    const newVal = !currentVal
-    setRides(rides.map(r => r.id === rideId ? { ...r, is_commute: newVal, category: newVal ? '日常交通' : '休闲骑行' } : r))
+  // 🔄 手动三向循环切换分类: 通勤骑行 ➔ 日常交通 ➔ 休闲骑行 ➔ 通勤骑行
+  async function handleCycleCategory(ride: Ride) {
+    const currentCat = ride.category || (ride.is_commute ? '日常交通' : '休闲骑行')
+    let nextCat = '通勤骑行'
+    let nextCommute = true
+
+    if (currentCat === '通勤骑行') {
+      nextCat = '日常交通'
+      nextCommute = true
+    } else if (currentCat === '日常交通') {
+      nextCat = '休闲骑行'
+      nextCommute = false
+    } else {
+      nextCat = '通勤骑行'
+      nextCommute = true
+    }
+
+    // 乐观更新 UI
+    setRides(rides.map(r => r.id === ride.id ? { 
+      ...r, 
+      is_commute: nextCommute, 
+      category: nextCat,
+      is_manual_override: true 
+    } : r))
+
+    // 保存到数据库，并标记 is_manual_override = true
     const { error } = await supabase
       .from('rides')
-      .update({ is_commute: newVal, category: newVal ? '日常交通' : '休闲骑行' })
-      .eq('id', rideId)
+      .update({ 
+        is_commute: nextCommute, 
+        category: nextCat,
+        is_manual_override: true 
+      })
+      .eq('id', ride.id)
 
     if (error) {
-      console.error('更新状态失败:', error.message)
+      console.error('更新分类失败:', error.message)
       if (user) fetchRides(user.id)
     }
   }
@@ -185,7 +213,7 @@ export default function DashboardPage() {
       const result = await res.json()
 
       if (result.success) {
-        setSyncMsg(`同步完成！已成功将所有骑行归类为：通勤骑行 / 日常交通 / 休闲骑行。`)
+        setSyncMsg(`同步完成！已成功将所有记录归类为：通勤骑行 / 日常交通 / 休闲骑行 (已保留你的手动修改)。`)
         fetchRides(userId)
       } else {
         setSyncMsg('同步失败：' + (result.error || '未知错误'))
@@ -232,13 +260,12 @@ export default function DashboardPage() {
     const remainingAmount = priceNum - savingsNum
     const remainingRides = Math.ceil(remainingAmount / 3.90)
     
-    // 计算历史平均日频
     const eligibleDates = rides
       .filter(r => r.is_commute && r.start_date)
       .map(r => new Date(r.start_date).getTime())
       .filter(t => !isNaN(t))
 
-    let ridesPerDay = 0.57 // 默认兜底按每周 4 次骑行计算
+    let ridesPerDay = 0.57
     if (eligibleDates.length > 0) {
       const earliestTime = Math.min(...eligibleDates)
       const nowTime = Date.now()
@@ -251,7 +278,6 @@ export default function DashboardPage() {
     const targetYear = targetDate.getFullYear()
     const targetMonth = targetDate.getMonth() + 1
 
-    // 精确匹配所需格式："预计 2027年3月 (约 384 次骑行)"
     paybackText = `预计 ${targetYear}年${targetMonth}月 (约 ${remainingRides} 次骑行)`
   }
 
@@ -283,6 +309,7 @@ export default function DashboardPage() {
       count: val.count
     }))
 
+  // 渲染三大分类独立标签（通勤骑行 / 日常交通 / 休闲骑行）
   function renderCategoryBadge(ride: Ride) {
     const cat = ride.category || (ride.is_commute ? '日常交通' : '休闲骑行')
 
@@ -374,7 +401,7 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* 📊 动态水平进度条 (ProgressBar) */}
+              {/* 📊 动态水平进度条 */}
               <div className="space-y-1.5 bg-slate-50/50 p-3 rounded-xl border border-slate-100">
                 <div className="flex justify-between items-center text-xs font-medium">
                   <span className="text-slate-500">回本进度 (Progress)</span>
@@ -613,9 +640,9 @@ export default function DashboardPage() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
-                                handleToggleCommute(ride.id, ride.is_commute)
+                                handleCycleCategory(ride)
                               }}
-                              title="点击手动切换 实用交通 / 休闲骑行"
+                              title="点击循环切换：通勤骑行 ➔ 日常交通 ➔ 休闲骑行"
                             >
                               {renderCategoryBadge(ride)}
                             </button>
