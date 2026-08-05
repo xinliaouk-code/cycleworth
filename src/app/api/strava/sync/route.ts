@@ -140,7 +140,7 @@ type CommuteSettings = {
   eveningEnd: number;
 }
 
-// 3 大核心分类规则：通勤骑行 / 日常交通 / 休闲骑行
+// 三大分类判定算法
 function classifyRide(
   startDateStr: string,
   startStation: string,
@@ -174,20 +174,20 @@ function classifyRide(
   const isMorningTime = hour >= settings.morningStart && hour < settings.morningEnd
   const isEveningTime = hour >= settings.eveningStart && hour < settings.eveningEnd
 
-  // 1. 通勤骑行（合并早晚高峰 Home ⇋ Office 往返，算钱）
   const isMorningCommute = isWeekday && isMorningTime && isHomeStart && isOfficeEnd
   const isEveningCommute = isWeekday && isEveningTime && isOfficeStart && isHomeEnd
 
+  // 1. 通勤骑行 (算钱)
   if (isMorningCommute || isEveningCommute) {
     return { isSavingsEligible: true, category: '通勤骑行' }
   }
 
-  // 2. 日常交通（点对点出行，算钱）
+  // 2. 日常交通 (算钱)
   if (startStation !== endStation && startStation !== '未知起点' && endStation !== '未知起点') {
     return { isSavingsEligible: true, category: '日常交通' }
   }
 
-  // 3. 休闲骑行（起点终点相同/环线骑行，不算钱）
+  // 3. 休闲骑行 (不算钱)
   return { isSavingsEligible: false, category: '休闲骑行' }
 }
 
@@ -286,9 +286,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, count: 0, message: '没有获取到任何 Strava 活动' })
     }
 
+    // 查询已有记录（包含 is_manual_override）
     const { data: existingRides } = await supabase
       .from('rides')
-      .select('id, strava_activity_id, name, start_date')
+      .select('id, strava_activity_id, name, start_date, is_manual_override')
       .eq('user_id', userId)
 
     const existingByActivityId = new Map<number, any>()
@@ -321,22 +322,28 @@ export async function POST(request: Request) {
       const { isSavingsEligible, category } = classifyRide(act.start_date, startStation, endStation, settings)
 
       if (matchedRecord) {
+        const updateData: any = {
+          name: act.name,
+          distance: act.distance,
+          moving_time: act.moving_time,
+          elapsed_time: act.elapsed_time,
+          type: act.type,
+          start_date: act.start_date,
+          start_station: startStation,
+          end_station: endStation,
+          summary_polyline: summaryPolyline,
+          strava_activity_id: act.id
+        }
+
+        // 🛡️ 核心修复：如果用户未曾手动覆盖，才使用算法判定的分类；否则严格保留用户手改结果
+        if (!matchedRecord.is_manual_override) {
+          updateData.is_commute = isSavingsEligible
+          updateData.category = category
+        }
+
         await supabase
           .from('rides')
-          .update({
-            name: act.name,
-            distance: act.distance,
-            moving_time: act.moving_time,
-            elapsed_time: act.elapsed_time,
-            type: act.type,
-            start_date: act.start_date,
-            is_commute: isSavingsEligible,
-            category: category,
-            start_station: startStation,
-            end_station: endStation,
-            summary_polyline: summaryPolyline,
-            strava_activity_id: act.id
-          })
+          .update(updateData)
           .eq('id', matchedRecord.id)
       } else {
         await supabase
@@ -352,6 +359,7 @@ export async function POST(request: Request) {
             start_date: act.start_date,
             is_commute: isSavingsEligible,
             category: category,
+            is_manual_override: false,
             start_station: startStation,
             end_station: endStation,
             summary_polyline: summaryPolyline
