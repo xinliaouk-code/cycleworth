@@ -18,7 +18,7 @@ type Ride = {
   moving_time: number;
   start_date: string;
   is_commute: boolean;
-  category?: string; // 3大分类：通勤骑行 / 日常交通 / 休闲骑行
+  category?: string;
   start_station?: string;
   end_station?: string;
   summary_polyline: string;
@@ -213,15 +213,17 @@ export default function DashboardPage() {
   const commuteRidesCount = rides.filter(r => r.is_commute).length
   const estimatedSavings = (commuteRidesCount * 3.90).toFixed(2)
 
-  // 🚲 Bike ROI 计算逻辑
+  // 🚲 Bike ROI & 日期算法计算
   const savingsNum = Number(estimatedSavings)
   const priceNum = parseFloat(bikePriceInput) || 0
-  const roiPercentage = priceNum > 0 ? ((savingsNum / priceNum) * 100).toFixed(1) : '0.0'
+  const roiPercentageNum = priceNum > 0 ? (savingsNum / priceNum) * 100 : 0
+  const roiPercentageStr = roiPercentageNum.toFixed(1)
 
   let paybackText = ''
   let isFullyPaidBack = false
+
   if (priceNum <= 0) {
-    paybackText = '请在下方设置购车金额'
+    paybackText = '请在右上角设置购车金额'
   } else if (savingsNum >= priceNum) {
     isFullyPaidBack = true
     const profit = (savingsNum - priceNum).toFixed(2)
@@ -229,7 +231,28 @@ export default function DashboardPage() {
   } else {
     const remainingAmount = priceNum - savingsNum
     const remainingRides = Math.ceil(remainingAmount / 3.90)
-    paybackText = `还差 £${remainingAmount.toFixed(2)} (约 ${remainingRides} 次骑行)`
+    
+    // 计算历史平均日频
+    const eligibleDates = rides
+      .filter(r => r.is_commute && r.start_date)
+      .map(r => new Date(r.start_date).getTime())
+      .filter(t => !isNaN(t))
+
+    let ridesPerDay = 0.57 // 默认兜底按每周 4 次骑行计算
+    if (eligibleDates.length > 0) {
+      const earliestTime = Math.min(...eligibleDates)
+      const nowTime = Date.now()
+      const diffDays = Math.max(7, (nowTime - earliestTime) / (1000 * 60 * 60 * 24))
+      ridesPerDay = eligibleDates.length / diffDays
+    }
+
+    const daysNeeded = Math.ceil(remainingRides / (ridesPerDay || 0.57))
+    const targetDate = new Date(Date.now() + daysNeeded * 24 * 60 * 60 * 1000)
+    const targetYear = targetDate.getFullYear()
+    const targetMonth = targetDate.getMonth() + 1
+
+    // 精确匹配所需格式："预计 2027年3月 (约 384 次骑行)"
+    paybackText = `预计 ${targetYear}年${targetMonth}月 (约 ${remainingRides} 次骑行)`
   }
 
   function getWeekKey(dateStr: string) {
@@ -260,7 +283,6 @@ export default function DashboardPage() {
       count: val.count
     }))
 
-  // 渲染 3 种独立分类标签（通勤骑行 / 日常交通 / 休闲骑行）
   function renderCategoryBadge(ride: Ride) {
     const cat = ride.category || (ride.is_commute ? '日常交通' : '休闲骑行')
 
@@ -334,20 +356,36 @@ export default function DashboardPage() {
           </div>
 
           {!collapseRoi && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
-              <div className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-100">
-                <span className="text-xs text-slate-400 block font-medium">已节省开支 (Savings)</span>
-                <span className="text-xl font-bold text-slate-800 mt-1 block">£{estimatedSavings}</span>
+            <div className="space-y-4 pt-1">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-100">
+                  <span className="text-xs text-slate-400 block font-medium">已节省开支 (Savings)</span>
+                  <span className="text-xl font-bold text-slate-800 mt-1 block">£{estimatedSavings}</span>
+                </div>
+                <div className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-100">
+                  <span className="text-xs text-slate-400 block font-medium">ROI 回报率</span>
+                  <span className="text-xl font-bold text-emerald-600 mt-1 block">{roiPercentageStr}%</span>
+                </div>
+                <div className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-100">
+                  <span className="text-xs text-slate-400 block font-medium">Estimated Payback (预估回本)</span>
+                  <span className={`text-xs md:text-sm font-bold mt-1.5 block ${isFullyPaidBack ? 'text-emerald-600' : 'text-slate-700'}`}>
+                    {paybackText}
+                  </span>
+                </div>
               </div>
-              <div className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-100">
-                <span className="text-xs text-slate-400 block font-medium">ROI 回报率</span>
-                <span className="text-xl font-bold text-emerald-600 mt-1 block">{roiPercentage}%</span>
-              </div>
-              <div className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-100">
-                <span className="text-xs text-slate-400 block font-medium">Estimated Payback (预估回本)</span>
-                <span className={`text-xs md:text-sm font-bold mt-1.5 block ${isFullyPaidBack ? 'text-emerald-600' : 'text-slate-700'}`}>
-                  {paybackText}
-                </span>
+
+              {/* 📊 动态水平进度条 (ProgressBar) */}
+              <div className="space-y-1.5 bg-slate-50/50 p-3 rounded-xl border border-slate-100">
+                <div className="flex justify-between items-center text-xs font-medium">
+                  <span className="text-slate-500">回本进度 (Progress)</span>
+                  <span className="text-emerald-600 font-bold">{roiPercentageStr}%</span>
+                </div>
+                <div className="w-full bg-slate-200/80 h-3 rounded-full overflow-hidden">
+                  <div 
+                    className="bg-gradient-to-r from-sky-500 to-emerald-500 h-full rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, Math.max(0, roiPercentageNum))}%` }}
+                  />
+                </div>
               </div>
             </div>
           )}
