@@ -18,6 +18,7 @@ type Ride = {
   moving_time: number;
   start_date: string;
   is_commute: boolean;
+  category?: string; // 3大分类：通勤骑行 / 日常交通 / 休闲骑行
   start_station?: string;
   end_station?: string;
   summary_polyline: string;
@@ -33,11 +34,12 @@ export default function DashboardPage() {
   
   // 模块折叠状态管理
   const [collapseSettings, setCollapseSettings] = useState(true)
+  const [collapseRoi, setCollapseRoi] = useState(false)
   const [collapseSync, setCollapseSync] = useState(false)
   const [collapseChart, setCollapseChart] = useState(false)
   const [collapseRides, setCollapseRides] = useState(false)
 
-  // 自定义多站点通勤设置
+  // 自定义多站点设置
   const [homeStation, setHomeStation] = useState('Custom House, Royal Victoria')
   const [officeStation, setOfficeStation] = useState('Bank, Old Street')
   const [morningStart, setMorningStart] = useState('7')
@@ -45,13 +47,16 @@ export default function DashboardPage() {
   const [eveningStart, setEveningStart] = useState('16')
   const [eveningEnd, setEveningEnd] = useState('20')
 
+  // 🚲 Bike ROI 购车成本设置
+  const [bikePriceInput, setBikePriceInput] = useState<string>('500')
+
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null)
 
   useEffect(() => {
-    const saved = localStorage.getItem('cw_commute_settings')
-    if (saved) {
+    const savedSettings = localStorage.getItem('cw_commute_settings')
+    if (savedSettings) {
       try {
-        const parsed = JSON.parse(saved)
+        const parsed = JSON.parse(savedSettings)
         if (parsed.homeStation) setHomeStation(parsed.homeStation)
         if (parsed.officeStation) setOfficeStation(parsed.officeStation)
         if (parsed.morningStart) setMorningStart(parsed.morningStart)
@@ -60,12 +65,22 @@ export default function DashboardPage() {
         if (parsed.eveningEnd) setEveningEnd(parsed.eveningEnd)
       } catch (e) {}
     }
+
+    const savedPrice = localStorage.getItem('cw_bike_price')
+    if (savedPrice) {
+      setBikePriceInput(savedPrice)
+    }
   }, [])
 
   function handleSaveSettings() {
     const settings = { homeStation, officeStation, morningStart, morningEnd, eveningStart, eveningEnd }
     localStorage.setItem('cw_commute_settings', JSON.stringify(settings))
-    setSyncMsg('多站点通勤规则保存成功！再次点击“同步记录”即可应用新的识别模式。')
+    setSyncMsg('多站点规则保存成功！重新点击“同步记录”即可刷新三大分类。')
+  }
+
+  function handleSaveBikePrice(price: string) {
+    setBikePriceInput(price)
+    localStorage.setItem('cw_bike_price', price)
   }
 
   useEffect(() => {
@@ -140,14 +155,14 @@ export default function DashboardPage() {
 
   async function handleToggleCommute(rideId: string, currentVal: boolean) {
     const newVal = !currentVal
-    setRides(rides.map(r => r.id === rideId ? { ...r, is_commute: newVal } : r))
+    setRides(rides.map(r => r.id === rideId ? { ...r, is_commute: newVal, category: newVal ? '日常交通' : '休闲骑行' } : r))
     const { error } = await supabase
       .from('rides')
-      .update({ is_commute: newVal })
+      .update({ is_commute: newVal, category: newVal ? '日常交通' : '休闲骑行' })
       .eq('id', rideId)
 
     if (error) {
-      console.error('更新通勤状态失败:', error.message)
+      console.error('更新状态失败:', error.message)
       if (user) fetchRides(user.id)
     }
   }
@@ -170,7 +185,7 @@ export default function DashboardPage() {
       const result = await res.json()
 
       if (result.success) {
-        setSyncMsg(`同步完成！已按多站点规则（Home: [${homeStation}] ⇋ Office: [${officeStation}]）自动分类识别。`)
+        setSyncMsg(`同步完成！已成功将所有骑行归类为：通勤骑行 / 日常交通 / 休闲骑行。`)
         fetchRides(userId)
       } else {
         setSyncMsg('同步失败：' + (result.error || '未知错误'))
@@ -197,6 +212,25 @@ export default function DashboardPage() {
   const totalDistanceKm = (rides.reduce((acc, r) => acc + (r.distance || 0), 0) / 1000).toFixed(1)
   const commuteRidesCount = rides.filter(r => r.is_commute).length
   const estimatedSavings = (commuteRidesCount * 3.90).toFixed(2)
+
+  // 🚲 Bike ROI 计算逻辑
+  const savingsNum = Number(estimatedSavings)
+  const priceNum = parseFloat(bikePriceInput) || 0
+  const roiPercentage = priceNum > 0 ? ((savingsNum / priceNum) * 100).toFixed(1) : '0.0'
+
+  let paybackText = ''
+  let isFullyPaidBack = false
+  if (priceNum <= 0) {
+    paybackText = '请在下方设置购车金额'
+  } else if (savingsNum >= priceNum) {
+    isFullyPaidBack = true
+    const profit = (savingsNum - priceNum).toFixed(2)
+    paybackText = `已成功回本！🎉 (净收益 £${profit})`
+  } else {
+    const remainingAmount = priceNum - savingsNum
+    const remainingRides = Math.ceil(remainingAmount / 3.90)
+    paybackText = `还差 £${remainingAmount.toFixed(2)} (约 ${remainingRides} 次骑行)`
+  }
 
   function getWeekKey(dateStr: string) {
     const d = new Date(dateStr)
@@ -225,6 +259,20 @@ export default function DashboardPage() {
       savings: Number(val.savings.toFixed(2)),
       count: val.count
     }))
+
+  // 渲染 3 种独立分类标签（通勤骑行 / 日常交通 / 休闲骑行）
+  function renderCategoryBadge(ride: Ride) {
+    const cat = ride.category || (ride.is_commute ? '日常交通' : '休闲骑行')
+
+    switch (cat) {
+      case '通勤骑行':
+        return <span className="px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">💼 通勤骑行</span>
+      case '日常交通':
+        return <span className="px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-sky-50 text-sky-700 border border-sky-200">🚲 日常交通</span>
+      default:
+        return <span className="px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">☕ 休闲骑行</span>
+    }
+  }
 
   return (
     <main className="min-h-screen bg-slate-50 px-2 py-4 md:p-8 relative">
@@ -258,6 +306,53 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* 🚲 Bike ROI 回报率计算卡片 */}
+        <div className="bg-white p-3.5 md:p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4 transition-all">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setCollapseRoi(!collapseRoi)}
+                className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold flex items-center justify-center text-xs transition cursor-pointer"
+                title={collapseRoi ? "展开模块" : "收起模块"}
+              >
+                {collapseRoi ? '+' : '−'}
+              </button>
+              <h2 className="text-base md:text-lg font-semibold text-slate-800">🚲 自行车投资回报率 (Bike ROI)</h2>
+            </div>
+            {!collapseRoi && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 hidden md:inline">购车/装备成本 (£):</span>
+                <input 
+                  type="number" 
+                  value={bikePriceInput}
+                  onChange={(e) => handleSaveBikePrice(e.target.value)}
+                  placeholder="如: 500"
+                  className="w-20 md:w-24 px-2.5 py-1 text-xs md:text-sm border border-slate-200 rounded-xl font-medium text-slate-700 text-center focus:outline-none focus:border-sky-500"
+                />
+              </div>
+            )}
+          </div>
+
+          {!collapseRoi && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+              <div className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-100">
+                <span className="text-xs text-slate-400 block font-medium">已节省开支 (Savings)</span>
+                <span className="text-xl font-bold text-slate-800 mt-1 block">£{estimatedSavings}</span>
+              </div>
+              <div className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-100">
+                <span className="text-xs text-slate-400 block font-medium">ROI 回报率</span>
+                <span className="text-xl font-bold text-emerald-600 mt-1 block">{roiPercentage}%</span>
+              </div>
+              <div className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-100">
+                <span className="text-xs text-slate-400 block font-medium">Estimated Payback (预估回本)</span>
+                <span className={`text-xs md:text-sm font-bold mt-1.5 block ${isFullyPaidBack ? 'text-emerald-600' : 'text-slate-700'}`}>
+                  {paybackText}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* ⚙️ 通勤规则多站点自定义设置 */}
         <div className="bg-white p-3.5 md:p-6 rounded-2xl shadow-sm border border-slate-100 space-y-3 transition-all">
           <div className="flex items-center justify-between">
@@ -269,7 +364,7 @@ export default function DashboardPage() {
               >
                 {collapseSettings ? '+' : '−'}
               </button>
-              <h2 className="text-base md:text-lg font-semibold text-slate-800">⚙️ 通勤规则自定义设置</h2>
+              <h2 className="text-base md:text-lg font-semibold text-slate-800">⚙️ 通勤与日常交通规则设置</h2>
             </div>
           </div>
 
@@ -277,7 +372,7 @@ export default function DashboardPage() {
             <div className="space-y-4 pt-2 border-t border-slate-100 text-xs md:text-sm">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-medium text-slate-600 mb-1">🏠 家附近站点 (支持多个，用逗号分隔)</label>
+                  <label className="block font-medium text-slate-600 mb-1">🏠 家附近站点 (用逗号分隔)</label>
                   <input 
                     type="text" 
                     value={homeStation} 
@@ -287,7 +382,7 @@ export default function DashboardPage() {
                   />
                 </div>
                 <div>
-                  <label className="block font-medium text-slate-600 mb-1">🏢 公司附近站点 (支持多个，用逗号分隔)</label>
+                  <label className="block font-medium text-slate-600 mb-1">🏢 公司附近站点 (用逗号分隔)</label>
                   <input 
                     type="text" 
                     value={officeStation} 
@@ -365,7 +460,7 @@ export default function DashboardPage() {
           </div>
 
           {!collapseSync && (
-            <p className="text-xs md:text-sm text-slate-500">点击同步将根据上方设置的多站点 Home/Office 规则自动匹配。</p>
+            <p className="text-xs md:text-sm text-slate-500">点击同步将自动清洗并识别“通勤骑行”、“日常交通”与“休闲骑行”。</p>
           )}
         </div>
 
@@ -482,14 +577,9 @@ export default function DashboardPage() {
                                 e.stopPropagation()
                                 handleToggleCommute(ride.id, ride.is_commute)
                               }}
-                              title="点击切换 通勤 / 休闲"
-                              className={`px-1.5 py-0.5 rounded-md text-[10px] font-medium shrink-0 transition cursor-pointer border ${
-                                ride.is_commute 
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' 
-                                  : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
-                              }`}
+                              title="点击手动切换 实用交通 / 休闲骑行"
                             >
-                              {ride.is_commute ? '上班通勤' : '休闲骑行'}
+                              {renderCategoryBadge(ride)}
                             </button>
                           </div>
                           <p className="text-[11px] text-slate-400 mt-0.5">

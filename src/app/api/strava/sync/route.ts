@@ -140,9 +140,7 @@ type CommuteSettings = {
   eveningEnd: number;
 }
 
-// -----------------------------------------------------------------------------------
-// 全新分类逻辑：只有“休闲骑行”（原地环线/同起点同终点）不算钱，其他实用骑行均算钱
-// -----------------------------------------------------------------------------------
+// 3 大核心分类规则：通勤骑行 / 日常交通 / 休闲骑行
 function classifyRide(
   startDateStr: string,
   startStation: string,
@@ -150,7 +148,7 @@ function classifyRide(
   settings: CommuteSettings
 ): { isSavingsEligible: boolean; category: string } {
   const d = new Date(startDateStr)
-  const day = d.getDay() // 0 为周日, 6 为周六
+  const day = d.getDay()
   const hour = d.getHours()
   const isWeekday = day >= 1 && day <= 5
 
@@ -176,22 +174,20 @@ function classifyRide(
   const isMorningTime = hour >= settings.morningStart && hour < settings.morningEnd
   const isEveningTime = hour >= settings.eveningStart && hour < settings.eveningEnd
 
-  // 1. 上班通勤（工作日 + 早高峰 + Home ⇋ Office）
-  if (isWeekday && isMorningTime && isHomeStart && isOfficeEnd) {
-    return { isSavingsEligible: true, category: '上班通勤' }
+  // 1. 通勤骑行（合并早晚高峰 Home ⇋ Office 往返，算钱）
+  const isMorningCommute = isWeekday && isMorningTime && isHomeStart && isOfficeEnd
+  const isEveningCommute = isWeekday && isEveningTime && isOfficeStart && isHomeEnd
+
+  if (isMorningCommute || isEveningCommute) {
+    return { isSavingsEligible: true, category: '通勤骑行' }
   }
 
-  // 2. 下班通勤（工作日 + 晚高峰 + Office ⇋ Home）
-  if (isWeekday && isEveningTime && isOfficeStart && isHomeEnd) {
-    return { isSavingsEligible: true, category: '下班通勤' }
-  }
-
-  // 3. 日常交通：只要起点与终点不同（A 到 B 的点对点出行），不论工作日/周末，都属于日常代步（算钱）
+  // 2. 日常交通（点对点出行，算钱）
   if (startStation !== endStation && startStation !== '未知起点' && endStation !== '未知起点') {
     return { isSavingsEligible: true, category: '日常交通' }
   }
 
-  // 4. 休闲骑行（起点终点相同/环线骑行，不算钱）
+  // 3. 休闲骑行（起点终点相同/环线骑行，不算钱）
   return { isSavingsEligible: false, category: '休闲骑行' }
 }
 
@@ -322,7 +318,7 @@ export async function POST(request: Request) {
       const fallbackKey = `${act.name}_${act.start_date}`
       const matchedRecord = existingByActivityId.get(act.id) || existingByKey.get(fallbackKey)
 
-      const { isSavingsEligible } = classifyRide(act.start_date, startStation, endStation, settings)
+      const { isSavingsEligible, category } = classifyRide(act.start_date, startStation, endStation, settings)
 
       if (matchedRecord) {
         await supabase
@@ -334,7 +330,8 @@ export async function POST(request: Request) {
             elapsed_time: act.elapsed_time,
             type: act.type,
             start_date: act.start_date,
-            is_commute: isSavingsEligible, // 保存“是否算作省钱/实用交通”
+            is_commute: isSavingsEligible,
+            category: category,
             start_station: startStation,
             end_station: endStation,
             summary_polyline: summaryPolyline,
@@ -354,6 +351,7 @@ export async function POST(request: Request) {
             type: act.type,
             start_date: act.start_date,
             is_commute: isSavingsEligible,
+            category: category,
             start_station: startStation,
             end_station: endStation,
             summary_polyline: summaryPolyline
