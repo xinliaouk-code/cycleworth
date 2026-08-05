@@ -154,9 +154,11 @@ export default function DashboardPage() {
     }
   }
 
+  // 🔽 下拉菜单直接切换分类函数
   async function handleSelectCategory(ride: Ride, newCategory: string) {
     const isSavingsEligible = newCategory === '通勤骑行' || newCategory === '日常交通'
 
+    // 乐观更新 UI
     setRides(rides.map(r => r.id === ride.id ? { 
       ...r, 
       is_commute: isSavingsEligible, 
@@ -164,6 +166,7 @@ export default function DashboardPage() {
       is_manual_override: true 
     } : r))
 
+    // 持久化到 Supabase
     const { error } = await supabase
       .from('rides')
       .update({ 
@@ -336,7 +339,7 @@ export default function DashboardPage() {
               >
                 {collapseRoi ? '+' : '−'}
               </button>
-              <h2 className="text-base md:text-lg font-semibold text-slate-800">🚲 自行车投资回报率 (Bike ROI)</h2>
+              <h2 className="text-base md:text-lg font-semibold text-slate-800">🚲 Bike ROI</h2>
             </div>
             {!collapseRoi && (
               <div className="flex items-center gap-2">
@@ -577,7 +580,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* 3. 近期骑行明细列表模块 */}
+        {/* 3. 近期骑行明细列表模块（原生 App 风格独立卡片） */}
         <div className="bg-white p-3.5 md:p-6 rounded-2xl shadow-sm border border-slate-100 space-y-3 transition-all">
           <div className="flex items-center gap-2">
             <button 
@@ -595,26 +598,29 @@ export default function DashboardPage() {
               {rides.length === 0 ? (
                 <p className="text-sm text-slate-400 py-4 text-center">暂无骑行记录，请先点击上方“同步记录”。</p>
               ) : (
-                <div className="divide-y divide-slate-100">
+                <div className="space-y-3 pt-1">
                   {rides.map((ride) => {
                     const currentCategory = ride.category || (ride.is_commute ? '日常交通' : '休闲骑行')
                     
                     return (
                       <div 
                         key={ride.id} 
-                        className="py-4.5 md:py-4 flex flex-col md:flex-row md:items-center justify-between text-sm gap-3 md:gap-4 hover:bg-slate-50/80 px-2 md:px-3 rounded-xl transition cursor-pointer"
                         onClick={() => setSelectedRide(ride)}
+                        className="p-3.5 md:p-4 bg-white rounded-2xl border border-slate-100 shadow-xs hover:border-slate-200 hover:shadow-md transition-all cursor-pointer space-y-3"
                       >
-                        <div className="w-full md:w-1/3 flex items-start justify-between md:justify-start gap-2">
+                        {/* 顶部：标题、分类下拉菜单、里程 */}
+                        <div className="flex items-start justify-between gap-2">
                           <div>
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium text-slate-800 text-xs md:text-sm truncate max-w-[140px] md:max-w-[200px]">{ride.name || '无标题骑行'}</p>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-semibold text-slate-800 text-xs md:text-sm truncate max-w-[150px] md:max-w-[220px]">
+                                {ride.name || '无标题骑行'}
+                              </p>
                               
                               <select
                                 value={currentCategory}
                                 onClick={(e) => e.stopPropagation()}
                                 onChange={(e) => handleSelectCategory(ride, e.target.value)}
-                                className={`px-1.5 py-0.5 rounded-md text-[10px] font-medium shrink-0 cursor-pointer border focus:outline-none appearance-none transition ${
+                                className={`px-2 py-0.5 rounded-lg text-[10px] font-medium shrink-0 cursor-pointer border focus:outline-none appearance-none transition ${
                                   currentCategory === '通勤骑行'
                                     ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
                                     : currentCategory === '日常交通'
@@ -622,35 +628,33 @@ export default function DashboardPage() {
                                     : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
                                 }`}
                               >
-                                <option value="通勤骑行" className="bg-white text-emerald-700 font-medium">💼 通勤骑行</option>
-                                <option value="日常交通" className="bg-white text-sky-700 font-medium">🚲 日常交通</option>
-                                <option value="休闲骑行" className="bg-white text-slate-600 font-medium">☕ 休闲骑行</option>
+                                <option value="通勤骑行">💼 通勤骑行</option>
+                                <option value="日常交通">🚲 日常交通</option>
+                                <option value="休闲骑行">☕ 休闲骑行</option>
                               </select>
                             </div>
                             <p className="text-[11px] text-slate-400 mt-1">
                               {new Date(ride.start_date).toLocaleDateString()} · {Math.round(ride.moving_time / 60)} 分钟
                             </p>
                           </div>
-                          <div className="md:hidden text-right shrink-0">
-                            <span className="font-bold text-slate-700 text-sm">{(ride.distance / 1000).toFixed(1)}</span>
-                            <span className="text-[11px] text-slate-500 font-medium ml-0.5">km</span>
+
+                          <div className="text-right shrink-0">
+                            <span className="font-bold text-slate-800 text-base md:text-lg">{(ride.distance / 1000).toFixed(1)}</span>
+                            <span className="text-xs text-slate-400 font-medium ml-0.5">km</span>
                           </div>
                         </div>
 
-                        <div className="w-full md:w-1/3 flex items-center gap-2 text-xs mt-1 md:mt-0">
-                          <div className="bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl flex-1 truncate">
-                            <span className="text-slate-400 block text-[9px] mb-0.5">起点站</span>
-                            <span className="font-semibold text-slate-700 truncate">{ride.start_station || '未知'}</span>
+                        {/* 底部：起点站 ➔ 终点站（包含在浅灰容器内） */}
+                        <div className="flex items-center gap-2 text-xs bg-slate-50/80 p-2.5 rounded-xl border border-slate-100/80">
+                          <div className="flex-1 truncate">
+                            <span className="text-slate-400 block text-[9px] leading-tight mb-0.5">起点站</span>
+                            <span className="font-semibold text-slate-700 truncate block">{ride.start_station || '未知'}</span>
                           </div>
-                          <span className="text-slate-400 font-bold">→</span>
-                          <div className="bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl flex-1 truncate">
-                            <span className="text-slate-400 block text-[9px] mb-0.5">终点站</span>
-                            <span className="font-semibold text-slate-700 truncate">{ride.end_station || '未知'}</span>
+                          <span className="text-slate-300 font-bold px-1">→</span>
+                          <div className="flex-1 truncate">
+                            <span className="text-slate-400 block text-[9px] leading-tight mb-0.5">终点站</span>
+                            <span className="font-semibold text-slate-700 truncate block">{ride.end_station || '未知'}</span>
                           </div>
-                        </div>
-
-                        <div className="hidden md:block w-1/6 text-right">
-                          <span className="font-semibold text-slate-700">{(ride.distance / 1000).toFixed(2)} km</span>
                         </div>
                       </div>
                     )
