@@ -86,9 +86,19 @@ export default function DashboardPage() {
     setSyncMsg('多站点规则保存成功！重新点击“同步记录”即可刷新三大分类。')
   }
 
-  function handleSaveBikePrice(price: string) {
+  // 本地输入修改
+  function handleBikePriceChange(price: string) {
     setBikePriceInput(price)
     localStorage.setItem('cw_bike_price', price)
+  }
+
+  // ☁️ 输入框失去焦点时，自动同步保存到 Supabase 云端
+  async function handleBikePriceBlur() {
+    if (!user) return
+    const priceNum = parseFloat(bikePriceInput) || 0
+    await supabase
+      .from('settings')
+      .upsert({ id: user.id, bike_price: priceNum }, { onConflict: 'id' })
   }
 
   useEffect(() => {
@@ -109,10 +119,26 @@ export default function DashboardPage() {
       } else {
         await checkExistingConnection(user.id)
         await fetchRides(user.id)
+        await fetchUserSettings(user.id)
       }
     }
     init()
   }, [router])
+
+  // 从 Supabase 读取云端自行车价格设置
+  async function fetchUserSettings(userId: string) {
+    const { data } = await supabase
+      .from('settings')
+      .select('bike_price')
+      .eq('id', userId)
+      .maybeSingle()
+
+    if (data && data.bike_price !== null && data.bike_price !== undefined) {
+      const priceStr = data.bike_price.toString()
+      setBikePriceInput(priceStr)
+      localStorage.setItem('cw_bike_price', priceStr)
+    }
+  }
 
   async function handleExchangeCode(code: string, userId: string) {
     setSyncMsg('正在处理 Strava 授权并同步最新记录...')
@@ -127,6 +153,7 @@ export default function DashboardPage() {
         setIsConnected(true)
         window.history.replaceState({}, document.title, '/dashboard')
         await handleSyncInternal(userId)
+        await fetchUserSettings(userId)
       } else {
         const errData = await res.json()
         setSyncMsg('授权处理失败：' + (errData.error || '未知错误'))
@@ -351,7 +378,8 @@ export default function DashboardPage() {
                 <input 
                   type="number" 
                   value={bikePriceInput}
-                  onChange={(e) => handleSaveBikePrice(e.target.value)}
+                  onChange={(e) => handleBikePriceChange(e.target.value)}
+                  onBlur={handleBikePriceBlur}
                   placeholder="如: 500"
                   className="w-20 md:w-24 px-2.5 py-1 text-xs md:text-sm border border-slate-200 rounded-xl font-medium text-slate-700 text-center focus:outline-none focus:border-sky-500"
                 />
