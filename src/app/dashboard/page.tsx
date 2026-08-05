@@ -154,11 +154,9 @@ export default function DashboardPage() {
     }
   }
 
-  // 🔽 下拉菜单直接切换分类函数
   async function handleSelectCategory(ride: Ride, newCategory: string) {
     const isSavingsEligible = newCategory === '通勤骑行' || newCategory === '日常交通'
 
-    // 乐观更新 UI
     setRides(rides.map(r => r.id === ride.id ? { 
       ...r, 
       is_commute: isSavingsEligible, 
@@ -166,7 +164,6 @@ export default function DashboardPage() {
       is_manual_override: true 
     } : r))
 
-    // 持久化到 Supabase
     const { error } = await supabase
       .from('rides')
       .update({ 
@@ -605,7 +602,7 @@ export default function DashboardPage() {
                     return (
                       <div 
                         key={ride.id} 
-                        className="py-3 flex flex-col md:flex-row md:items-center justify-between text-sm gap-2 md:gap-4 hover:bg-slate-50/80 px-2 rounded-xl transition cursor-pointer"
+                        className="py-4.5 md:py-4 flex flex-col md:flex-row md:items-center justify-between text-sm gap-3 md:gap-4 hover:bg-slate-50/80 px-2 md:px-3 rounded-xl transition cursor-pointer"
                         onClick={() => setSelectedRide(ride)}
                       >
                         <div className="w-full md:w-1/3 flex items-start justify-between md:justify-start gap-2">
@@ -613,10 +610,9 @@ export default function DashboardPage() {
                             <div className="flex items-center gap-2">
                               <p className="font-medium text-slate-800 text-xs md:text-sm truncate max-w-[140px] md:max-w-[200px]">{ride.name || '无标题骑行'}</p>
                               
-                              {/* 🔽 优雅的下拉菜单选择器 */}
                               <select
                                 value={currentCategory}
-                                onClick={(e) => e.stopPropagation()} // 防止触发行的点击弹窗
+                                onClick={(e) => e.stopPropagation()}
                                 onChange={(e) => handleSelectCategory(ride, e.target.value)}
                                 className={`px-1.5 py-0.5 rounded-md text-[10px] font-medium shrink-0 cursor-pointer border focus:outline-none appearance-none transition ${
                                   currentCategory === '通勤骑行'
@@ -631,7 +627,7 @@ export default function DashboardPage() {
                                 <option value="休闲骑行" className="bg-white text-slate-600 font-medium">☕ 休闲骑行</option>
                               </select>
                             </div>
-                            <p className="text-[11px] text-slate-400 mt-0.5">
+                            <p className="text-[11px] text-slate-400 mt-1">
                               {new Date(ride.start_date).toLocaleDateString()} · {Math.round(ride.moving_time / 60)} 分钟
                             </p>
                           </div>
@@ -641,13 +637,13 @@ export default function DashboardPage() {
                           </div>
                         </div>
 
-                        <div className="w-full md:w-1/3 flex items-center gap-2 text-xs">
-                          <div className="bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-xl flex-1 truncate">
+                        <div className="w-full md:w-1/3 flex items-center gap-2 text-xs mt-1 md:mt-0">
+                          <div className="bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl flex-1 truncate">
                             <span className="text-slate-400 block text-[9px] mb-0.5">起点站</span>
                             <span className="font-semibold text-slate-700 truncate">{ride.start_station || '未知'}</span>
                           </div>
                           <span className="text-slate-400 font-bold">→</span>
-                          <div className="bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-xl flex-1 truncate">
+                          <div className="bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl flex-1 truncate">
                             <span className="text-slate-400 block text-[9px] mb-0.5">终点站</span>
                             <span className="font-semibold text-slate-700 truncate">{ride.end_station || '未知'}</span>
                           </div>
