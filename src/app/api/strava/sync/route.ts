@@ -132,24 +132,83 @@ function getNearestStation(lat?: number, lng?: number): string {
 }
 
 // -----------------------------------------------------------------------------------
-// 核心新增：基于专属站点的智能通勤判断 (Custom House/Royal Victoria ⇋ Bank/Old Street)
+// 全新智能分类判定核心逻辑
 // -----------------------------------------------------------------------------------
-function checkIsCommute(startStation: string, endStation: string): boolean {
-  const residentialHubs = ["Custom House", "Royal Victoria"]
-  const financialHubs = ["Bank", "Old Street"]
+type CommuteSettings = {
+  homeStation: string;
+  officeStation: string;
+  morningStart: number;
+  morningEnd: number;
+  eveningStart: number;
+  eveningEnd: number;
+}
 
-  const isResToFin = residentialHubs.includes(startStation) && financialHubs.includes(endStation)
-  const isFinToRes = financialHubs.includes(startStation) && residentialHubs.includes(endStation)
+function classifyRide(
+  startDateStr: string,
+  startStation: string,
+  endStation: string,
+  settings: CommuteSettings
+): { isCommute: boolean; category: string } {
+  const d = new Date(startDateStr)
+  const day = d.getDay() // 0 为周日, 6 为周六
+  const hour = d.getHours()
 
-  return isResToFin || isFinToRes
+  // 1. 周末骑行判定
+  if (day === 0 || day === 6) {
+    return { isCommute: false, category: '周末骑行' }
+  }
+
+  const home = settings.homeStation.toLowerCase().trim()
+  const office = settings.officeStation.toLowerCase().trim()
+  const start = startStation.toLowerCase().trim()
+  const end = endStation.toLowerCase().trim()
+
+  const isHomeStart = start.includes(home) || (home.includes('custom house') && start.includes('royal victoria'))
+  const isOfficeEnd = end.includes(office) || (office.includes('bank') && end.includes('old street'))
+  
+  const isOfficeStart = start.includes(office) || (office.includes('bank') && start.includes('old street'))
+  const isHomeEnd = end.includes(home) || (home.includes('custom house') && end.includes('royal victoria'))
+
+  const isMorningTime = hour >= settings.morningStart && hour < settings.morningEnd
+  const isEveningTime = hour >= settings.eveningStart && hour < settings.eveningEnd
+
+  // 2. 上班通勤：工作日 + 早高峰时间 + Home 起点 + Office 终点
+  if (isMorningTime && isHomeStart && isOfficeEnd) {
+    return { isCommute: true, category: '上班通勤' }
+  }
+
+  // 3. 下班通勤：工作日 + 晚高峰时间 + Office 起点 + Home 终点
+  if (isEveningTime && isOfficeStart && isHomeEnd) {
+    return { isCommute: true, category: '下班通勤' }
+  }
+
+  // 4. 工作日非通勤路线/非通勤时段
+  return { isCommute: false, category: '普通骑行' }
 }
 
 export async function POST(request: Request) {
   try {
-    const { userId } = await request.json()
+    const { 
+      userId, 
+      homeStation = 'Custom House', 
+      officeStation = 'Bank',
+      morningStart = 7,
+      morningEnd = 10,
+      eveningStart = 16,
+      eveningEnd = 20
+    } = await request.json()
 
     if (!userId) {
       return NextResponse.json({ error: '请求中缺少 userId' }, { status: 400 })
+    }
+
+    const settings: CommuteSettings = {
+      homeStation,
+      officeStation,
+      morningStart: Number(morningStart),
+      morningEnd: Number(morningEnd),
+      eveningStart: Number(eveningStart),
+      eveningEnd: Number(eveningEnd)
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -168,12 +227,9 @@ export async function POST(request: Request) {
 
     let currentAccessToken = conn.access_token
 
-    // 先测试一次请求，如果 401 则刷新 Token
     let testRes = await fetch(
       'https://www.strava.com/api/v3/athlete/activities?per_page=1',
-      {
-        headers: { Authorization: `Bearer ${currentAccessToken}` }
-      }
+      { headers: { Authorization: `Bearer ${currentAccessToken}` } }
     )
 
     if (testRes.status === 401 && conn.refresh_token) {
@@ -202,9 +258,6 @@ export async function POST(request: Request) {
       }
     }
 
-    // -------------------------------------------------------------------------
-    // 分页循环拉取 Strava 所有历史活动
-    // -------------------------------------------------------------------------
     let page = 1
     const perPage = 100 
     let allActivities: any[] = []
@@ -212,26 +265,15 @@ export async function POST(request: Request) {
     while (true) {
       const stravaRes = await fetch(
         `https://www.strava.com/api/v3/athlete/activities?page=${page}&per_page=${perPage}`,
-        {
-          headers: { Authorization: `Bearer ${currentAccessToken}` }
-        }
+        { headers: { Authorization: `Bearer ${currentAccessToken}` } }
       )
 
-      if (!stravaRes.ok) {
-        break
-      }
-
+      if (!stravaRes.ok) break
       const activities = await stravaRes.json()
-      if (!Array.isArray(activities) || activities.length === 0) {
-        break 
-      }
+      if (!Array.isArray(activities) || activities.length === 0) break
 
       allActivities = allActivities.concat(activities)
-
-      if (activities.length < perPage) {
-        break
-      }
-
+      if (activities.length < perPage) break
       page++
     }
 
@@ -249,12 +291,8 @@ export async function POST(request: Request) {
 
     if (existingRides) {
       existingRides.forEach((r: any) => {
-        if (r.strava_activity_id != null) {
-          existingByActivityId.set(r.strava_activity_id, r)
-        }
-        if (r.name && r.start_date) {
-          existingByKey.set(`${r.name}_${r.start_date}`, r)
-        }
+        if (r.strava_activity_id != null) existingByActivityId.set(r.strava_activity_id, r)
+        if (r.name && r.start_date) existingByKey.set(`${r.name}_${r.start_date}`, r)
       })
     }
 
@@ -275,6 +313,9 @@ export async function POST(request: Request) {
       const fallbackKey = `${act.name}_${act.start_date}`
       const matchedRecord = existingByActivityId.get(act.id) || existingByKey.get(fallbackKey)
 
+      // 调用动态判别规则
+      const { isCommute, category } = classifyRide(act.start_date, startStation, endStation, settings)
+
       if (matchedRecord) {
         await supabase
           .from('rides')
@@ -285,6 +326,7 @@ export async function POST(request: Request) {
             elapsed_time: act.elapsed_time,
             type: act.type,
             start_date: act.start_date,
+            is_commute: isCommute,
             start_station: startStation,
             end_station: endStation,
             summary_polyline: summaryPolyline,
@@ -292,9 +334,6 @@ export async function POST(request: Request) {
           })
           .eq('id', matchedRecord.id)
       } else {
-        // 核心修改：在插入新记录时，调用函数自动判定是否为通勤
-        const isAutoCommute = checkIsCommute(startStation, endStation)
-
         await supabase
           .from('rides')
           .insert({
@@ -306,7 +345,7 @@ export async function POST(request: Request) {
             elapsed_time: act.elapsed_time,
             type: act.type,
             start_date: act.start_date,
-            is_commute: isAutoCommute, // 👈 自动识别的结果将保存到数据库
+            is_commute: isCommute,
             start_station: startStation,
             end_station: endStation,
             summary_polyline: summaryPolyline
