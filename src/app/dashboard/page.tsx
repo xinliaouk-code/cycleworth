@@ -25,6 +25,13 @@ type Ride = {
   summary_polyline: string;
 }
 
+// 📅 中文日期格式化：2026年8月4日
+function formatDateCN(dateStr: string) {
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return dateStr
+  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`
+}
+
 export default function DashboardPage() {
   const router = useRouter()
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null)
@@ -154,11 +161,9 @@ export default function DashboardPage() {
     }
   }
 
-  // 🔽 下拉菜单直接切换分类函数
   async function handleSelectCategory(ride: Ride, newCategory: string) {
     const isSavingsEligible = newCategory === '通勤骑行' || newCategory === '日常交通'
 
-    // 乐观更新 UI
     setRides(rides.map(r => r.id === ride.id ? { 
       ...r, 
       is_commute: isSavingsEligible, 
@@ -166,7 +171,6 @@ export default function DashboardPage() {
       is_manual_override: true 
     } : r))
 
-    // 持久化到 Supabase
     const { error } = await supabase
       .from('rides')
       .update({ 
@@ -328,7 +332,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* 🚲 Bike ROI 回报率计算卡片 */}
+        {/* 🚲 Bike ROI 卡片 */}
         <div className="bg-white p-3.5 md:p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4 transition-all">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -580,7 +584,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* 3. 近期骑行明细列表模块（原生 App 风格独立卡片） */}
+        {/* 3. 近期骑行明细列表模块 */}
         <div className="bg-white p-3.5 md:p-6 rounded-2xl shadow-sm border border-slate-100 space-y-3 transition-all">
           <div className="flex items-center gap-2">
             <button 
@@ -608,11 +612,11 @@ export default function DashboardPage() {
                         onClick={() => setSelectedRide(ride)}
                         className="p-3.5 md:p-4 bg-white rounded-2xl border border-slate-100 shadow-xs hover:border-slate-200 hover:shadow-md transition-all cursor-pointer space-y-3"
                       >
-                        {/* 顶部：标题、分类下拉菜单、里程 */}
+                        {/* 顶部：标题（大字号）、分类选择器、里程 */}
                         <div className="flex items-start justify-between gap-2">
                           <div>
                             <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-semibold text-slate-800 text-xs md:text-sm truncate max-w-[150px] md:max-w-[220px]">
+                              <p className="font-bold text-slate-800 text-base md:text-lg truncate max-w-[150px] sm:max-w-[220px]">
                                 {ride.name || '无标题骑行'}
                               </p>
                               
@@ -620,7 +624,7 @@ export default function DashboardPage() {
                                 value={currentCategory}
                                 onClick={(e) => e.stopPropagation()}
                                 onChange={(e) => handleSelectCategory(ride, e.target.value)}
-                                className={`px-2 py-0.5 rounded-lg text-[10px] font-medium shrink-0 cursor-pointer border focus:outline-none appearance-none transition ${
+                                className={`px-2 py-0.5 rounded-lg text-[10px] md:text-xs font-medium shrink-0 cursor-pointer border focus:outline-none appearance-none transition ${
                                   currentCategory === '通勤骑行'
                                     ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
                                     : currentCategory === '日常交通'
@@ -633,8 +637,8 @@ export default function DashboardPage() {
                                 <option value="休闲骑行">☕ 休闲骑行</option>
                               </select>
                             </div>
-                            <p className="text-[11px] text-slate-400 mt-1">
-                              {new Date(ride.start_date).toLocaleDateString()} · {Math.round(ride.moving_time / 60)} 分钟
+                            <p className="text-xs md:text-sm text-slate-400 mt-1 font-normal">
+                              {formatDateCN(ride.start_date)} · {Math.round(ride.moving_time / 60)} 分钟
                             </p>
                           </div>
 
@@ -644,7 +648,7 @@ export default function DashboardPage() {
                           </div>
                         </div>
 
-                        {/* 底部：起点站 ➔ 终点站（包含在浅灰容器内） */}
+                        {/* 底部：起点站 ➔ 终点站 */}
                         <div className="flex items-center gap-2 text-xs bg-slate-50/80 p-2.5 rounded-xl border border-slate-100/80">
                           <div className="flex-1 truncate">
                             <span className="text-slate-400 block text-[9px] leading-tight mb-0.5">起点站</span>
@@ -676,7 +680,7 @@ export default function DashboardPage() {
                   {selectedRide.name || '骑行路线详情'}
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  {new Date(selectedRide.start_date).toLocaleDateString()} · {(selectedRide.distance / 1000).toFixed(2)} km
+                  {formatDateCN(selectedRide.start_date)} · {(selectedRide.distance / 1000).toFixed(2)} km
                 </p>
               </div>
               <button 
