@@ -32,11 +32,41 @@ export default function DashboardPage() {
   const [syncMsg, setSyncMsg] = useState('')
   
   // 模块折叠状态管理
+  const [collapseSettings, setCollapseSettings] = useState(true)
   const [collapseSync, setCollapseSync] = useState(false)
   const [collapseChart, setCollapseChart] = useState(false)
   const [collapseRides, setCollapseRides] = useState(false)
 
+  // 自定义多站点通勤设置
+  const [homeStation, setHomeStation] = useState('Custom House, Royal Victoria')
+  const [officeStation, setOfficeStation] = useState('Bank, Old Street')
+  const [morningStart, setMorningStart] = useState('7')
+  const [morningEnd, setMorningEnd] = useState('10')
+  const [eveningStart, setEveningStart] = useState('16')
+  const [eveningEnd, setEveningEnd] = useState('20')
+
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null)
+
+  useEffect(() => {
+    const saved = localStorage.getItem('cw_commute_settings')
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        if (parsed.homeStation) setHomeStation(parsed.homeStation)
+        if (parsed.officeStation) setOfficeStation(parsed.officeStation)
+        if (parsed.morningStart) setMorningStart(parsed.morningStart)
+        if (parsed.morningEnd) setMorningEnd(parsed.morningEnd)
+        if (parsed.eveningStart) setEveningStart(parsed.eveningStart)
+        if (parsed.eveningEnd) setEveningEnd(parsed.eveningEnd)
+      } catch (e) {}
+    }
+  }, [])
+
+  function handleSaveSettings() {
+    const settings = { homeStation, officeStation, morningStart, morningEnd, eveningStart, eveningEnd }
+    localStorage.setItem('cw_commute_settings', JSON.stringify(settings))
+    setSyncMsg('多站点通勤规则保存成功！再次点击“同步记录”即可应用新的识别模式。')
+  }
 
   useEffect(() => {
     async function init() {
@@ -127,12 +157,20 @@ export default function DashboardPage() {
       const res = await fetch('/api/strava/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId })
+        body: JSON.stringify({ 
+          userId,
+          homeStation,
+          officeStation,
+          morningStart,
+          morningEnd,
+          eveningStart,
+          eveningEnd
+        })
       })
       const result = await res.json()
 
       if (result.success) {
-        setSyncMsg('同步完成！已成功获取最新记录，并自动识别 Custom House / Royal Victoria ⇋ Bank / Old Street 往返通勤路线。')
+        setSyncMsg(`同步完成！已按多站点规则（Home: [${homeStation}] ⇋ Office: [${officeStation}]）自动分类识别。`)
         fetchRides(userId)
       } else {
         setSyncMsg('同步失败：' + (result.error || '未知错误'))
@@ -220,6 +258,77 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* ⚙️ 通勤规则多站点自定义设置 */}
+        <div className="bg-white p-3.5 md:p-6 rounded-2xl shadow-sm border border-slate-100 space-y-3 transition-all">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setCollapseSettings(!collapseSettings)}
+                className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold flex items-center justify-center text-xs transition cursor-pointer"
+                title={collapseSettings ? "展开模块" : "收起模块"}
+              >
+                {collapseSettings ? '+' : '−'}
+              </button>
+              <h2 className="text-base md:text-lg font-semibold text-slate-800">⚙️ 通勤规则自定义设置</h2>
+            </div>
+          </div>
+
+          {!collapseSettings && (
+            <div className="space-y-4 pt-2 border-t border-slate-100 text-xs md:text-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-medium text-slate-600 mb-1">🏠 家附近站点 (支持多个，用逗号分隔)</label>
+                  <input 
+                    type="text" 
+                    value={homeStation} 
+                    onChange={e => setHomeStation(e.target.value)} 
+                    placeholder="如: Custom House, Royal Victoria" 
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-medium text-slate-600 mb-1">🏢 公司附近站点 (支持多个，用逗号分隔)</label>
+                  <input 
+                    type="text" 
+                    value={officeStation} 
+                    onChange={e => setOfficeStation(e.target.value)} 
+                    placeholder="如: Bank, Old Street, Canary Wharf" 
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div>
+                  <label className="block font-medium text-slate-600 mb-1">🌅 上班最早点 (点)</label>
+                  <input type="number" min="0" max="23" value={morningStart} onChange={e => setMorningStart(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-xl" />
+                </div>
+                <div>
+                  <label className="block font-medium text-slate-600 mb-1">🌅 上班最晚点 (点)</label>
+                  <input type="number" min="0" max="23" value={morningEnd} onChange={e => setMorningEnd(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-xl" />
+                </div>
+                <div>
+                  <label className="block font-medium text-slate-600 mb-1">🌆 下班最早点 (点)</label>
+                  <input type="number" min="0" max="23" value={eveningStart} onChange={e => setEveningStart(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-xl" />
+                </div>
+                <div>
+                  <label className="block font-medium text-slate-600 mb-1">🌆 下班最晚点 (点)</label>
+                  <input type="number" min="0" max="23" value={eveningEnd} onChange={e => setEveningEnd(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-xl" />
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <button 
+                  onClick={handleSaveSettings}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-medium rounded-xl text-xs transition cursor-pointer"
+                >
+                  保存设置
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* 1. Strava 数据同步模块 */}
         <div className="bg-white p-3.5 md:p-6 rounded-2xl shadow-sm border border-slate-100 space-y-3 transition-all">
           <div className="flex items-center justify-between">
@@ -256,7 +365,7 @@ export default function DashboardPage() {
           </div>
 
           {!collapseSync && (
-            <p className="text-xs md:text-sm text-slate-500">点击同步以获取最新的云端骑行记录并自动识别通勤。</p>
+            <p className="text-xs md:text-sm text-slate-500">点击同步将根据上方设置的多站点 Home/Office 规则自动匹配。</p>
           )}
         </div>
 

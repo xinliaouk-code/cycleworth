@@ -158,31 +158,41 @@ function classifyRide(
     return { isCommute: false, category: '周末骑行' }
   }
 
-  const home = settings.homeStation.toLowerCase().trim()
-  const office = settings.officeStation.toLowerCase().trim()
+  // 支持中英文逗号分割，拆分成 clean 的小写站点名称数组
+  const homeList = settings.homeStation
+    .split(/[,，]/)
+    .map(s => s.trim().toLowerCase())
+    .filter(Boolean)
+
+  const officeList = settings.officeStation
+    .split(/[,，]/)
+    .map(s => s.trim().toLowerCase())
+    .filter(Boolean)
+
   const start = startStation.toLowerCase().trim()
   const end = endStation.toLowerCase().trim()
 
-  const isHomeStart = start.includes(home) || (home.includes('custom house') && start.includes('royal victoria'))
-  const isOfficeEnd = end.includes(office) || (office.includes('bank') && end.includes('old street'))
+  // 判断起点/终点是否匹配多站点列表中的任意一个
+  const isHomeStart = homeList.some(h => start.includes(h) || h.includes(start))
+  const isOfficeEnd = officeList.some(o => end.includes(o) || o.includes(end))
   
-  const isOfficeStart = start.includes(office) || (office.includes('bank') && start.includes('old street'))
-  const isHomeEnd = end.includes(home) || (home.includes('custom house') && end.includes('royal victoria'))
+  const isOfficeStart = officeList.some(o => start.includes(o) || o.includes(start))
+  const isHomeEnd = homeList.some(h => end.includes(h) || h.includes(end))
 
   const isMorningTime = hour >= settings.morningStart && hour < settings.morningEnd
   const isEveningTime = hour >= settings.eveningStart && hour < settings.eveningEnd
 
-  // 2. 上班通勤：工作日 + 早高峰时间 + Home 起点 + Office 终点
+  // 2. 上班通勤：工作日 + 早高峰时间 + 起点在 Home 列表 + 终点在 Office 列表
   if (isMorningTime && isHomeStart && isOfficeEnd) {
     return { isCommute: true, category: '上班通勤' }
   }
 
-  // 3. 下班通勤：工作日 + 晚高峰时间 + Office 起点 + Home 终点
+  // 3. 下班通勤：工作日 + 晚高峰时间 + 起点在 Office 列表 + 终点在 Home 列表
   if (isEveningTime && isOfficeStart && isHomeEnd) {
     return { isCommute: true, category: '下班通勤' }
   }
 
-  // 4. 工作日非通勤路线/非通勤时段
+  // 4. 普通骑行
   return { isCommute: false, category: '普通骑行' }
 }
 
