@@ -18,7 +18,7 @@ type Ride = {
   moving_time: number;
   start_date: string;
   is_commute: boolean;
-  category?: string; // 三大类别: 通勤骑行 / 日常交通 / 休闲骑行
+  category?: string; // 通勤骑行 / 日常交通 / 休闲骑行
   is_manual_override?: boolean;
   start_station?: string;
   end_station?: string;
@@ -154,37 +154,24 @@ export default function DashboardPage() {
     }
   }
 
-  // 🔄 手动三向循环切换分类: 通勤骑行 ➔ 日常交通 ➔ 休闲骑行 ➔ 通勤骑行
-  async function handleCycleCategory(ride: Ride) {
-    const currentCat = ride.category || (ride.is_commute ? '日常交通' : '休闲骑行')
-    let nextCat = '通勤骑行'
-    let nextCommute = true
-
-    if (currentCat === '通勤骑行') {
-      nextCat = '日常交通'
-      nextCommute = true
-    } else if (currentCat === '日常交通') {
-      nextCat = '休闲骑行'
-      nextCommute = false
-    } else {
-      nextCat = '通勤骑行'
-      nextCommute = true
-    }
+  // 🔽 下拉菜单直接切换分类函数
+  async function handleSelectCategory(ride: Ride, newCategory: string) {
+    const isSavingsEligible = newCategory === '通勤骑行' || newCategory === '日常交通'
 
     // 乐观更新 UI
     setRides(rides.map(r => r.id === ride.id ? { 
       ...r, 
-      is_commute: nextCommute, 
-      category: nextCat,
+      is_commute: isSavingsEligible, 
+      category: newCategory,
       is_manual_override: true 
     } : r))
 
-    // 保存到数据库，并标记 is_manual_override = true
+    // 持久化到 Supabase
     const { error } = await supabase
       .from('rides')
       .update({ 
-        is_commute: nextCommute, 
-        category: nextCat,
+        is_commute: isSavingsEligible, 
+        category: newCategory,
         is_manual_override: true 
       })
       .eq('id', ride.id)
@@ -213,7 +200,7 @@ export default function DashboardPage() {
       const result = await res.json()
 
       if (result.success) {
-        setSyncMsg(`同步完成！已成功将所有记录归类为：通勤骑行 / 日常交通 / 休闲骑行 (已保留你的手动修改)。`)
+        setSyncMsg(`同步完成！已按规则识别类别，并完美保留你的手动修改。`)
         fetchRides(userId)
       } else {
         setSyncMsg('同步失败：' + (result.error || '未知错误'))
@@ -241,7 +228,7 @@ export default function DashboardPage() {
   const commuteRidesCount = rides.filter(r => r.is_commute).length
   const estimatedSavings = (commuteRidesCount * 3.90).toFixed(2)
 
-  // 🚲 Bike ROI & 日期算法计算
+  // 🚲 Bike ROI 计算逻辑
   const savingsNum = Number(estimatedSavings)
   const priceNum = parseFloat(bikePriceInput) || 0
   const roiPercentageNum = priceNum > 0 ? (savingsNum / priceNum) * 100 : 0
@@ -308,20 +295,6 @@ export default function DashboardPage() {
       savings: Number(val.savings.toFixed(2)),
       count: val.count
     }))
-
-  // 渲染三大分类独立标签（通勤骑行 / 日常交通 / 休闲骑行）
-  function renderCategoryBadge(ride: Ride) {
-    const cat = ride.category || (ride.is_commute ? '日常交通' : '休闲骑行')
-
-    switch (cat) {
-      case '通勤骑行':
-        return <span className="px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">💼 通勤骑行</span>
-      case '日常交通':
-        return <span className="px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-sky-50 text-sky-700 border border-sky-200">🚲 日常交通</span>
-      default:
-        return <span className="px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">☕ 休闲骑行</span>
-    }
-  }
 
   return (
     <main className="min-h-screen bg-slate-50 px-2 py-4 md:p-8 relative">
@@ -401,7 +374,6 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* 📊 动态水平进度条 */}
               <div className="space-y-1.5 bg-slate-50/50 p-3 rounded-xl border border-slate-100">
                 <div className="flex justify-between items-center text-xs font-medium">
                   <span className="text-slate-500">回本进度 (Progress)</span>
@@ -627,53 +599,66 @@ export default function DashboardPage() {
                 <p className="text-sm text-slate-400 py-4 text-center">暂无骑行记录，请先点击上方“同步记录”。</p>
               ) : (
                 <div className="divide-y divide-slate-100">
-                  {rides.map((ride) => (
-                    <div 
-                      key={ride.id} 
-                      className="py-3 flex flex-col md:flex-row md:items-center justify-between text-sm gap-2 md:gap-4 hover:bg-slate-50/80 px-2 rounded-xl transition cursor-pointer"
-                      onClick={() => setSelectedRide(ride)}
-                    >
-                      <div className="w-full md:w-1/3 flex items-start justify-between md:justify-start gap-2">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium text-slate-800 text-xs md:text-sm truncate max-w-[140px] md:max-w-[200px]">{ride.name || '无标题骑行'}</p>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleCycleCategory(ride)
-                              }}
-                              title="点击循环切换：通勤骑行 ➔ 日常交通 ➔ 休闲骑行"
-                            >
-                              {renderCategoryBadge(ride)}
-                            </button>
+                  {rides.map((ride) => {
+                    const currentCategory = ride.category || (ride.is_commute ? '日常交通' : '休闲骑行')
+                    
+                    return (
+                      <div 
+                        key={ride.id} 
+                        className="py-3 flex flex-col md:flex-row md:items-center justify-between text-sm gap-2 md:gap-4 hover:bg-slate-50/80 px-2 rounded-xl transition cursor-pointer"
+                        onClick={() => setSelectedRide(ride)}
+                      >
+                        <div className="w-full md:w-1/3 flex items-start justify-between md:justify-start gap-2">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-slate-800 text-xs md:text-sm truncate max-w-[140px] md:max-w-[200px]">{ride.name || '无标题骑行'}</p>
+                              
+                              {/* 🔽 优雅的下拉菜单选择器 */}
+                              <select
+                                value={currentCategory}
+                                onClick={(e) => e.stopPropagation()} // 防止触发行的点击弹窗
+                                onChange={(e) => handleSelectCategory(ride, e.target.value)}
+                                className={`px-1.5 py-0.5 rounded-md text-[10px] font-medium shrink-0 cursor-pointer border focus:outline-none appearance-none transition ${
+                                  currentCategory === '通勤骑行'
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                    : currentCategory === '日常交通'
+                                    ? 'bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100'
+                                    : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                                }`}
+                              >
+                                <option value="通勤骑行" className="bg-white text-emerald-700 font-medium">💼 通勤骑行</option>
+                                <option value="日常交通" className="bg-white text-sky-700 font-medium">🚲 日常交通</option>
+                                <option value="休闲骑行" className="bg-white text-slate-600 font-medium">☕ 休闲骑行</option>
+                              </select>
+                            </div>
+                            <p className="text-[11px] text-slate-400 mt-0.5">
+                              {new Date(ride.start_date).toLocaleDateString()} · {Math.round(ride.moving_time / 60)} 分钟
+                            </p>
                           </div>
-                          <p className="text-[11px] text-slate-400 mt-0.5">
-                            {new Date(ride.start_date).toLocaleDateString()} · {Math.round(ride.moving_time / 60)} 分钟
-                          </p>
+                          <div className="md:hidden text-right shrink-0">
+                            <span className="font-bold text-slate-700 text-sm">{(ride.distance / 1000).toFixed(1)}</span>
+                            <span className="text-[11px] text-slate-500 font-medium ml-0.5">km</span>
+                          </div>
                         </div>
-                        <div className="md:hidden text-right shrink-0">
-                          <span className="font-bold text-slate-700 text-sm">{(ride.distance / 1000).toFixed(1)}</span>
-                          <span className="text-[11px] text-slate-500 font-medium ml-0.5">km</span>
-                        </div>
-                      </div>
 
-                      <div className="w-full md:w-1/3 flex items-center gap-2 text-xs">
-                        <div className="bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-xl flex-1 truncate">
-                          <span className="text-slate-400 block text-[9px] mb-0.5">起点站</span>
-                          <span className="font-semibold text-slate-700 truncate">{ride.start_station || '未知'}</span>
+                        <div className="w-full md:w-1/3 flex items-center gap-2 text-xs">
+                          <div className="bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-xl flex-1 truncate">
+                            <span className="text-slate-400 block text-[9px] mb-0.5">起点站</span>
+                            <span className="font-semibold text-slate-700 truncate">{ride.start_station || '未知'}</span>
+                          </div>
+                          <span className="text-slate-400 font-bold">→</span>
+                          <div className="bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-xl flex-1 truncate">
+                            <span className="text-slate-400 block text-[9px] mb-0.5">终点站</span>
+                            <span className="font-semibold text-slate-700 truncate">{ride.end_station || '未知'}</span>
+                          </div>
                         </div>
-                        <span className="text-slate-400 font-bold">→</span>
-                        <div className="bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-xl flex-1 truncate">
-                          <span className="text-slate-400 block text-[9px] mb-0.5">终点站</span>
-                          <span className="font-semibold text-slate-700 truncate">{ride.end_station || '未知'}</span>
-                        </div>
-                      </div>
 
-                      <div className="hidden md:block w-1/6 text-right">
-                        <span className="font-semibold text-slate-700">{(ride.distance / 1000).toFixed(2)} km</span>
+                        <div className="hidden md:block w-1/6 text-right">
+                          <span className="font-semibold text-slate-700">{(ride.distance / 1000).toFixed(2)} km</span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>
