@@ -4,7 +4,8 @@ import { getStationCoordinates } from '../../../lib/strava/stations'
 export type Ride = { id: string; name: string; distance: number; calories?: number | null; moving_time: number; start_date: string; is_commute: boolean; category?: string; is_manual_override?: boolean; start_station?: string; end_station?: string; summary_polyline: string }
 
 export function isRideSavingsEligible(ride: Ride, settings: TfLFareSettings) {
-  return ride.is_commute && (settings.savingsMode === 'all_eligible' || ride.category === '\u901a\u52e4\u9a91\u884c')
+  const type = ride.category === '\u901a\u52e4\u9a91\u884c' ? 'commute' : ride.category === '\u65e5\u5e38\u4ea4\u901a' ? 'transport' : 'leisure'
+  return settings.savingsMode === 'commute_only' ? type === 'commute' : settings.savingsCategories.includes(type)
 }
 
 export function getRideSaving(ride: Ride, settings: TfLFareSettings = DEFAULT_TFL_FARE_SETTINGS) {
