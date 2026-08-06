@@ -2,9 +2,23 @@
 
 import { Auth } from '@supabase/auth-ui-react'
 import { ThemeSupa } from '@supabase/auth-ui-shared'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 
 export default function LoginPage() {
+  const router = useRouter()
+  const [isRedirecting, setIsRedirecting] = useState(false)
+
+  useEffect(() => {
+    const redirect = () => { setIsRedirecting(true); router.replace('/dashboard') }
+    supabase.auth.getSession().then(({ data: { session } }) => { if (session) redirect() })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN') redirect()
+    })
+    return () => subscription.unsubscribe()
+  }, [router])
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-sky-50 to-white p-4">
       <div className="w-full max-w-md bg-white p-8 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
@@ -16,6 +30,7 @@ export default function LoginPage() {
             连接你的骑行数据，量化你的财务回报
           </p>
         </div>
+        {isRedirecting && <p className="mb-4 rounded-xl bg-emerald-50 px-3 py-2 text-center text-sm font-medium text-emerald-700">登录成功，正在进入仪表盘…</p>}
         
         {/* Supabase 官方提供的核心登录组件 */}
         <Auth
