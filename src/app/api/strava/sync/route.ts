@@ -9,6 +9,8 @@ type RidesRow = {
   strava_activity_id: number | null;
   name: string | null;
   start_date: string | null;
+  is_commute: boolean | null;
+  category: string | null;
   is_manual_override: boolean;
 }
 
@@ -142,7 +144,7 @@ export async function POST(request: Request) {
     // 查询已有记录（包含 is_manual_override）
     const { data: existingRides } = await supabase
       .from('rides')
-      .select('id, strava_activity_id, name, start_date, is_manual_override')
+      .select('id, strava_activity_id, name, start_date, is_commute, category, is_manual_override')
       .eq('user_id', userId)
 
     const existingByActivityId = new Map<number, RidesRow>()
@@ -190,9 +192,16 @@ export async function POST(request: Request) {
       }
 
       if (matchedRecord) {
-        // 🛡️ 保留手动覆盖：用户曾手改的，不重写分类
+        // 🛡️ 保留手动覆盖：用户曾手改的，不重写分类。
+        // 例外：若手动记录缺少有效分类（category 为空，属历史脏数据），
+        // 则用本次规则结果补全，避免此类记录一直显示为“休闲骑行”。已有
+        // 有效手动分类的记录不会被覆盖。
+        const hasManualCategory =
+          matchedRecord.is_manual_override &&
+          matchedRecord.category != null &&
+          matchedRecord.category !== ''
         const updateData: any = { ...baseFields }
-        if (!matchedRecord.is_manual_override) {
+        if (!hasManualCategory) {
           updateData.is_commute = isSavingsEligible
           updateData.category = category
         }

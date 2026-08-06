@@ -62,11 +62,15 @@ export function classifyRide(
   const isMorningTime = hour >= settings.morningStart && hour < settings.morningEnd
   const isEveningTime = hour >= settings.eveningStart && hour < settings.eveningEnd
 
+  // 严格的早晚高峰通勤（home→office 上班 / office→home 下班）
   const isMorningCommute = isWeekday && isMorningTime && isHomeStart && isOfficeEnd
   const isEveningCommute = isWeekday && isEveningTime && isOfficeStart && isHomeEnd
 
+  // 不限高峰时段的跨 home↔office 往返，也计入通勤骑行（含早退/加班/远程切换等时段）
+  const isCrossCommute = isWeekday && ((isHomeStart && isOfficeEnd) || (isOfficeStart && isHomeEnd))
+
   // 1. 通勤骑行 (算钱)
-  if (isMorningCommute || isEveningCommute) {
+  if (isMorningCommute || isEveningCommute || isCrossCommute) {
     return { isSavingsEligible: true, category: '通勤骑行' }
   }
 
