@@ -38,3 +38,9 @@ body {
   color: #334155;
   font-weight: 500;
 }
+
+@media (min-width: 640px) {
+  .overflow-hidden.rounded-xl.border > .border-t {
+    align-items: center;
+  }
+}

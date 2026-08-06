@@ -15,7 +15,7 @@ export default function HomePage() {
             href="/dashboard" 
             className="inline-block px-8 py-3.5 bg-sky-600 text-white font-semibold text-sm rounded-xl hover:bg-sky-700 transition shadow-sm"
           >
-            进入 Dashboard
+            进入主页
           </Link>
         </div>
       </div>
