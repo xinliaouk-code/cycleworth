@@ -14,6 +14,7 @@ import { SyncStatus } from './_components/SyncStatus'
 import { WeeklyChart } from './_components/WeeklyChart'
 import { RideList } from './_components/RideList'
 import { MaintenanceCard } from './_components/MaintenanceCard'
+import { RideHeatmap } from './_components/RideHeatmap'
 
 // Utils & Types
 import { Ride, formatDateCN, calculateROI, prepareChartData } from './_lib/utils'
@@ -297,6 +298,7 @@ export default function DashboardPage() {
           totalCalories={totalCalories}
         />
         {user && <MaintenanceCard userId={user.id} odometerKm={Number(totalDistanceKm)} />}
+        <RideHeatmap rides={rides} />
 
         <BikeROICard 
           {...roiData}
