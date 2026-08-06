@@ -24,3 +24,17 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Keep the Zone fare editor light and card-like rather than browser-table heavy. */
+.overflow-hidden.rounded-xl.border {
+  border-color: #f1f5f9;
+}
+
+.overflow-hidden.rounded-xl.border > .border-t {
+  border-color: #f8fafc;
+}
+
+.overflow-hidden.rounded-xl.border > .border-t b {
+  color: #334155;
+  font-weight: 500;
+}
