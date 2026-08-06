@@ -21,6 +21,7 @@ import { RideAdviceCard } from './_components/RideAdviceCard'
 import { Ride, formatDateCN, calculateROI, prepareChartData } from './_lib/utils'
 import { LanguageSwitcher, useLanguage } from '../../components/LanguageProvider'
 import { DEFAULT_TFL_FARE_SETTINGS, parseTfLFareSettings } from '../../lib/tfl/fares'
+import { DEFAULT_DASHBOARD_LAYOUT, parseDashboardLayout } from '../../lib/dashboard-layout'
 
 const RideMap = dynamic<{ polyline: string }>(
   () => import('../../components/RideMap'), 
@@ -95,6 +96,7 @@ export default function DashboardPage() {
   // 🚲 Bike ROI 购车成本设置（惰性初始化）
   const [bikePriceInput, setBikePriceInput] = useState<string>(loadBikePrice)
   const [fareSettings, setFareSettings] = useState(DEFAULT_TFL_FARE_SETTINGS)
+  const [dashboardLayout, setDashboardLayout] = useState(DEFAULT_DASHBOARD_LAYOUT)
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null)
 
     useEffect(() => {
@@ -138,6 +140,7 @@ export default function DashboardPage() {
     if (data?.tfl_fare_settings) {
       const savedFareSettings = parseTfLFareSettings(data.tfl_fare_settings)
       setFareSettings(savedFareSettings)
+      setDashboardLayout(parseDashboardLayout(savedFareSettings.dashboardLayout))
     }
   }
 
@@ -279,40 +282,42 @@ export default function DashboardPage() {
   const roiData = calculateROI(rides, bikePriceInput, fareSettings, lang)
   const chartData = prepareChartData(rides, fareSettings)
   const totalCalories = Math.round(rides.reduce((total, ride) => total + (Number(ride.calories) || 0), 0))
+  const sectionOrder = (id: import('../../lib/dashboard-layout').DashboardSection) => dashboardLayout.order.indexOf(id)
+  const isSectionVisible = (id: import('../../lib/dashboard-layout').DashboardSection) => !dashboardLayout.hidden.includes(id)
   const rideDetails = lang === 'zh' ? { title: '\u9a91\u884c\u8def\u7ebf\u8be6\u60c5', start: '\u8d77\u70b9\u7ad9', end: '\u7ec8\u70b9\u7ad9', unknown: '\u672a\u77e5', minutes: '\u5206\u949f' } : { title: 'Ride details', start: 'Start station', end: 'End station', unknown: 'Unknown', minutes: 'min' }
 
   return (
     <main className="min-h-screen bg-slate-50 px-2 py-4 md:p-8 relative">
-      <div className="max-w-4xl mx-auto space-y-4 md:space-y-6">
+      <div className="mx-auto flex max-w-4xl flex-col gap-4 md:gap-6">
         <div className="flex items-start justify-between gap-3 px-1 sm:items-center">
           <div className="min-w-0">
             <h1 className="text-2xl font-bold text-slate-800 tracking-tight">CycleWorth</h1>
             <p className="text-sm text-slate-500 mt-0.5">{t.tagline}</p>
           </div>
-          <div className="flex shrink-0 items-center gap-2"><Link href="/settings" title={lang === 'zh' ? '\u8bbe\u7f6e' : 'Settings'} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-sm text-slate-500 sm:hidden">⚙</Link><Link href="/settings" className="hidden text-xs font-semibold text-slate-500 hover:text-sky-600 sm:inline">{lang === 'zh' ? '\u8bbe\u7f6e' : 'Settings'}</Link><LanguageSwitcher /><div className="hidden text-right text-xs text-slate-400 md:block">{user?.email}</div></div>
+          <div className="flex shrink-0 items-center gap-2"><Link href="/settings" title={lang === 'zh' ? '\u8bbe\u7f6e' : 'Settings'} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-sm text-slate-500 sm:hidden">⚙</Link><Link href="/settings" className="hidden text-xs font-semibold text-slate-500 hover:text-sky-600 sm:inline">{lang === 'zh' ? '\u8bbe\u7f6e' : 'Settings'}</Link><Link href="/settings/layout" className="hidden text-xs font-semibold text-slate-500 hover:text-sky-600 md:inline">{lang === 'zh' ? '\u5e03\u5c40' : 'Layout'}</Link><LanguageSwitcher /><div className="hidden text-right text-xs text-slate-400 lg:block">{user?.email}</div></div>
         </div>
 
-        <RideAdviceCard />
+        {isSectionVisible('advice') && <div style={{ order: sectionOrder('advice') }}><RideAdviceCard /></div>}
 
-        <StatsGrid 
+        {isSectionVisible('stats') && <div style={{ order: sectionOrder('stats') }}><StatsGrid 
           totalRides={rides.length} 
           totalDistanceKm={totalDistanceKm} 
           estimatedSavings={roiData.estimatedSavings} 
           totalCalories={totalCalories}
-        />
-        {user && <MaintenanceCard userId={user.id} odometerKm={Number(totalDistanceKm)} />}
-        <RideHeatmap rides={rides} />
+        /></div>}
+        {user && isSectionVisible('maintenance') && <div style={{ order: sectionOrder('maintenance') }}><MaintenanceCard userId={user.id} odometerKm={Number(totalDistanceKm)} /></div>}
+        {isSectionVisible('weekly') && <div style={{ order: sectionOrder('weekly') }}><RideHeatmap rides={rides} /></div>}
 
-        <BikeROICard 
+        {isSectionVisible('roi') && <div style={{ order: sectionOrder('roi') }}><BikeROICard 
           {...roiData}
           collapseRoi={collapseRoi}
           setCollapseRoi={setCollapseRoi}
           bikePriceInput={bikePriceInput}
           handleBikePriceChange={handleBikePriceChange}
           handleBikePriceBlur={handleBikePriceBlur}
-        />
+        /></div>}
 
-        <SettingsPanel 
+        {isSectionVisible('settings') && <div style={{ order: sectionOrder('settings') }}><SettingsPanel 
           collapseSettings={collapseSettings}
           setCollapseSettings={setCollapseSettings}
           homeStation={homeStation} setHomeStation={setHomeStation}
@@ -322,9 +327,9 @@ export default function DashboardPage() {
           eveningStart={eveningStart} setEveningStart={setEveningStart}
           eveningEnd={eveningEnd} setEveningEnd={setEveningEnd}
           handleSaveSettings={handleSaveSettings}
-        />
+        /></div>}
 
-        <SyncStatus 
+        {isSectionVisible('sync') && <div style={{ order: sectionOrder('sync') }}><SyncStatus 
           collapseSync={collapseSync}
           setCollapseSync={setCollapseSync}
           isConnected={isConnected}
@@ -332,7 +337,7 @@ export default function DashboardPage() {
           handleSync={handleSync}
           handleFullResync={handleFullResync}
           isSyncing={isSyncing}
-        />
+        /></div>}
 
         {syncMsg && (
           <div className="flex items-center gap-2 text-xs md:text-sm text-sky-700 bg-sky-50 p-3.5 rounded-2xl border border-sky-100 shadow-sm">
@@ -341,20 +346,20 @@ export default function DashboardPage() {
           </div>
         )}
 
-        <WeeklyChart 
+        {isSectionVisible('chart') && <div style={{ order: sectionOrder('chart') }}><WeeklyChart 
           collapseChart={collapseChart}
           setCollapseChart={setCollapseChart}
           chartData={chartData}
-        />
+        /></div>}
 
-        <RideList 
+        {isSectionVisible('rides') && <div style={{ order: sectionOrder('rides') }}><RideList 
           rides={rides}
           fareSettings={fareSettings}
           collapseRides={collapseRides}
           setCollapseRides={setCollapseRides}
           setSelectedRide={setSelectedRide}
           handleSelectCategory={handleSelectCategory}
-        />
+        /></div>}
       </div>
 
       {selectedRide && (

@@ -1,7 +1,8 @@
 export type FareKey = 'z1_1' | 'z1_2' | 'z1_3' | 'z1_4' | 'z1_5' | 'z1_6' | 'outside_1' | 'outside_2' | 'outside_3' | 'outside_4' | 'z2_6'
 export type SavingsMode = 'all_eligible' | 'commute_only'
 export type SavingsCategory = 'commute' | 'transport' | 'leisure'
-export type TfLFareSettings = { fallbackFare: number; savingsMode: SavingsMode; savingsCategories: SavingsCategory[]; peak: Record<FareKey, number>; offPeak: Record<FareKey, number> }
+import type { DashboardLayout } from '../dashboard-layout'
+export type TfLFareSettings = { fallbackFare: number; savingsMode: SavingsMode; savingsCategories: SavingsCategory[]; dashboardLayout?: DashboardLayout; peak: Record<FareKey, number>; offPeak: Record<FareKey, number> }
 export type TfLFare = { amount: number; isPeak: boolean; source: 'tfl-2026' | 'fallback' }
 
 export const DEFAULT_TFL_FARE_SETTINGS: TfLFareSettings = {
@@ -17,7 +18,7 @@ export function parseTfLFareSettings(value: unknown): TfLFareSettings {
   const read = (source: Partial<Record<FareKey, number>> | undefined, fallback: Record<FareKey, number>) => Object.fromEntries(Object.entries(fallback).map(([key, amount]) => [key, typeof source?.[key as FareKey] === 'number' ? source[key as FareKey] : amount])) as Record<FareKey, number>
   const savingsMode = saved.savingsMode === 'commute_only' ? 'commute_only' : 'all_eligible'
   const savingsCategories: SavingsCategory[] = Array.isArray((saved as { savingsCategories?: unknown }).savingsCategories) ? (saved as { savingsCategories: unknown[] }).savingsCategories.filter((item): item is SavingsCategory => item === 'commute' || item === 'transport' || item === 'leisure') : (savingsMode === 'commute_only' ? ['commute'] : ['commute', 'transport'])
-  return { fallbackFare: typeof saved.fallbackFare === 'number' ? saved.fallbackFare : DEFAULT_TFL_FARE_SETTINGS.fallbackFare, savingsMode, savingsCategories, peak: read(saved.peak, DEFAULT_TFL_FARE_SETTINGS.peak), offPeak: read(saved.offPeak, DEFAULT_TFL_FARE_SETTINGS.offPeak) }
+  return { fallbackFare: typeof saved.fallbackFare === 'number' ? saved.fallbackFare : DEFAULT_TFL_FARE_SETTINGS.fallbackFare, savingsMode, savingsCategories, dashboardLayout: saved.dashboardLayout as DashboardLayout | undefined, peak: read(saved.peak, DEFAULT_TFL_FARE_SETTINGS.peak), offPeak: read(saved.offPeak, DEFAULT_TFL_FARE_SETTINGS.offPeak) }
 }
 
 const CENTRAL_LONDON = { lat: 51.5074, lng: -0.1278 }
