@@ -3,6 +3,10 @@ import { getStationCoordinates } from '../../../lib/strava/stations'
 
 export type Ride = { id: string; name: string; distance: number; calories?: number | null; moving_time: number; start_date: string; is_commute: boolean; category?: string; is_manual_override?: boolean; start_station?: string; end_station?: string; summary_polyline: string }
 
+export function isRideSavingsEligible(ride: Ride, settings: TfLFareSettings) {
+  return ride.is_commute && (settings.savingsMode === 'all_eligible' || ride.category === '\u901a\u52e4\u9a91\u884c')
+}
+
 export function getRideSaving(ride: Ride, settings: TfLFareSettings = DEFAULT_TFL_FARE_SETTINGS) {
   const fare = getTfLSingleFare(
     { station: ride.start_station, ...getStationCoordinates(ride.start_station ?? '') },
@@ -27,7 +31,7 @@ export function getWeekKey(dateStr: string) {
 
 export function calculateROI(rides: Ride[], bikePriceInput: string, fareSettings: TfLFareSettings, lang: 'en' | 'zh') {
   const commuteCost = fareSettings.fallbackFare
-  const savingsNum = rides.filter(ride => ride.is_commute).reduce((sum, ride) => sum + getRideSaving(ride, fareSettings), 0)
+  const savingsNum = rides.filter(ride => isRideSavingsEligible(ride, fareSettings)).reduce((sum, ride) => sum + getRideSaving(ride, fareSettings), 0)
   const estimatedSavings = savingsNum.toFixed(2)
   const priceNum = Number.parseFloat(bikePriceInput) || 0
   const roiPercentageNum = priceNum > 0 ? (savingsNum / priceNum) * 100 : 0
@@ -55,6 +59,6 @@ export function calculateROI(rides: Ride[], bikePriceInput: string, fareSettings
 
 export function prepareChartData(rides: Ride[], fareSettings: TfLFareSettings) {
   const weeks = new Map<string, { distance: number; savings: number }>()
-  rides.forEach(ride => { if (!ride.start_date) return; const key = getWeekKey(ride.start_date); const value = weeks.get(key) || { distance: 0, savings: 0 }; value.distance += (ride.distance || 0) / 1000; if (ride.is_commute) value.savings += getRideSaving(ride, fareSettings); weeks.set(key, value) })
+  rides.forEach(ride => { if (!ride.start_date) return; const key = getWeekKey(ride.start_date); const value = weeks.get(key) || { distance: 0, savings: 0 }; value.distance += (ride.distance || 0) / 1000; if (isRideSavingsEligible(ride, fareSettings)) value.savings += getRideSaving(ride, fareSettings); weeks.set(key, value) })
   return [...weeks.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([shortWeek, value]) => ({ shortWeek, distance: Number(value.distance.toFixed(1)), savings: Number(value.savings.toFixed(2)) }))
 }
