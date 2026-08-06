@@ -352,6 +352,7 @@ export default function DashboardPage() {
 
         <RideList 
           rides={rides}
+          commuteCostInput={commuteCostInput}
           collapseRides={collapseRides}
           setCollapseRides={setCollapseRides}
           setSelectedRide={setSelectedRide}
