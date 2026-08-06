@@ -19,10 +19,26 @@ export function classifyRide(
   endStation: string,
   settings: CommuteSettings
 ): RideClassification {
+  // 用伦敦本地时区（Europe/London）判断星期与小时。
+  // Strava 的 start_date 是 UTC，若直接 new Date().getDay()/getHours() 会按
+  // 服务器时区（Vercel 默认 UTC）计算，与用户按本地时刻设置的早晚高峰窗口
+  // 产生偏差（尤其夏令时/跨时区），导致通勤骑行被漏判。
   const d = new Date(startDateStr)
-  const day = d.getDay()
-  const hour = d.getHours()
-  const isWeekday = day >= 1 && day <= 5
+  const londonParts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/London',
+    weekday: 'short',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  }).formatToParts(d)
+  const parts = Object.fromEntries(londonParts.map(p => [p.type, p.value]))
+  const dayNum = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(parts.weekday)
+  const hour = Number(parts.hour) % 24
+  const isWeekday = dayNum >= 1 && dayNum <= 5
 
   const homeList = settings.homeStation
     .split(/[,，]/)
