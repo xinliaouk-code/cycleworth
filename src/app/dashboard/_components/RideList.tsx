@@ -55,9 +55,9 @@ export function RideList({
                           {ride.is_manual_override && (
                             <span
                               className="px-1.5 py-0.5 rounded-md text-[9px] font-medium bg-amber-100 text-amber-700 border border-amber-200 whitespace-nowrap"
-                              title="此条骑行的分类曾被你手动修改过，自动同步/重算会保留你的手动选择"
+                              title="This ride is locked after a manual category change. Sync and full recalculation will not overwrite it."
                             >
-                              已手动修改
+                              Locked
                             </span>
                           )}
                           <select

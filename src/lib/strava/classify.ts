@@ -66,11 +66,20 @@ export function classifyRide(
   const isMorningCommute = isWeekday && isMorningTime && isHomeStart && isOfficeEnd
   const isEveningCommute = isWeekday && isEveningTime && isOfficeStart && isHomeEnd
 
+  // A home GPS point can be several streets away from its nearest station, while
+  // the office endpoint is usually much more reliable. Treat weekday rides that
+  // arrive at an office station in the morning, or leave one in the evening, as
+  // commutes even when the home-side station does not match exactly.
+  const isOfficeBoundCommute = isWeekday && (
+    (isMorningTime && isOfficeEnd) ||
+    (isEveningTime && isOfficeStart)
+  )
+
   // 不限高峰时段的跨 home↔office 往返，也计入通勤骑行（含早退/加班/远程切换等时段）
   const isCrossCommute = isWeekday && ((isHomeStart && isOfficeEnd) || (isOfficeStart && isHomeEnd))
 
   // 1. 通勤骑行 (算钱)
-  if (isMorningCommute || isEveningCommute || isCrossCommute) {
+  if (isMorningCommute || isEveningCommute || isOfficeBoundCommute || isCrossCommute) {
     return { isSavingsEligible: true, category: '通勤骑行' }
   }
 
