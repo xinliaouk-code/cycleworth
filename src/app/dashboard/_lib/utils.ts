@@ -2,6 +2,7 @@ export type Ride = {
   id: string;
   name: string;
   distance: number;
+  calories?: number | null;
   moving_time: number;
   start_date: string;
   is_commute: boolean;
@@ -26,9 +27,10 @@ export function getWeekKey(dateStr: string) {
   return monday.toISOString().substring(0, 10)
 }
 
-export function calculateROI(rides: Ride[], bikePriceInput: string) {
+export function calculateROI(rides: Ride[], bikePriceInput: string, commuteCostInput: string) {
   const commuteRidesCount = rides.filter(r => r.is_commute).length
-  const estimatedSavings = (commuteRidesCount * 3.90).toFixed(2)
+  const commuteCost = Math.max(0, parseFloat(commuteCostInput) || 0)
+  const estimatedSavings = (commuteRidesCount * commuteCost).toFixed(2)
   const savingsNum = Number(estimatedSavings)
   const priceNum = parseFloat(bikePriceInput) || 0
   const roiPercentageNum = priceNum > 0 ? (savingsNum / priceNum) * 100 : 0
@@ -44,7 +46,7 @@ export function calculateROI(rides: Ride[], bikePriceInput: string) {
     paybackText = `已成功回本！🎉 (净收益 £${profit})`
   } else {
     const remainingAmount = priceNum - savingsNum
-    const remainingRides = Math.ceil(remainingAmount / 3.90)
+    const remainingRides = commuteCost > 0 ? Math.ceil(remainingAmount / commuteCost) : 0
     
     const eligibleDates = rides
       .filter(r => r.is_commute && r.start_date)
@@ -76,14 +78,15 @@ export function calculateROI(rides: Ride[], bikePriceInput: string) {
   }
 }
 
-export function prepareChartData(rides: Ride[]) {
+export function prepareChartData(rides: Ride[], commuteCostInput: string) {
+  const commuteCost = Math.max(0, parseFloat(commuteCostInput) || 0)
   const weeklyMap = new Map<string, { distance: number; savings: number; count: number }>()
   rides.forEach(r => {
     if (!r.start_date) return
     const weekKey = getWeekKey(r.start_date)
     const curr = weeklyMap.get(weekKey) || { distance: 0, savings: 0, count: 0 }
     curr.distance += (r.distance || 0) / 1000
-    if (r.is_commute) curr.savings += 3.90
+    if (r.is_commute) curr.savings += commuteCost
     curr.count += 1
     weeklyMap.set(weekKey, curr)
   })

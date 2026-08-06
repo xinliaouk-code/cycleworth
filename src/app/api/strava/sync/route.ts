@@ -178,6 +178,11 @@ export async function POST(request: Request) {
 
       const { isSavingsEligible, category } = classifyRide(act.start_date, startStation, endStation, settings)
 
+      const detailedActivity = await fetch(`https://www.strava.com/api/v3/activities/${act.id}`, {
+        headers: { Authorization: `Bearer ${currentAccessToken}` }
+      }).then(async response => response.ok ? response.json() : null).catch(() => null)
+      const calories = detailedActivity?.calories ?? act.calories ?? act.kilojoules ?? null
+
       const baseFields = {
         name: act.name,
         distance: act.distance,
@@ -188,6 +193,7 @@ export async function POST(request: Request) {
         start_station: startStation,
         end_station: endStation,
         summary_polyline: summaryPolyline,
+        calories,
         strava_activity_id: act.id
       }
 

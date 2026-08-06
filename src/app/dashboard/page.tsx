@@ -62,6 +62,15 @@ function loadBikePrice() {
   }
 }
 
+function loadCommuteCost() {
+  if (typeof window === 'undefined') return '3.9'
+  try {
+    return localStorage.getItem('cw_commute_cost') ?? '3.9'
+  } catch {
+    return '3.9'
+  }
+}
+
 export default function DashboardPage() {
   const { t } = useLanguage()
   const router = useRouter()
@@ -89,6 +98,7 @@ export default function DashboardPage() {
 
   // 🚲 Bike ROI 购车成本设置（惰性初始化）
   const [bikePriceInput, setBikePriceInput] = useState<string>(loadBikePrice)
+  const [commuteCostInput, setCommuteCostInput] = useState<string>(loadCommuteCost)
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null)
 
     useEffect(() => {
@@ -246,6 +256,11 @@ export default function DashboardPage() {
     localStorage.setItem('cw_bike_price', price)
   }
 
+  function handleCommuteCostChange(cost: string) {
+    setCommuteCostInput(cost)
+    localStorage.setItem('cw_commute_cost', cost)
+  }
+
   async function handleBikePriceBlur() {
     if (!user) return
     const priceNum = parseFloat(bikePriceInput) || 0
@@ -266,8 +281,9 @@ export default function DashboardPage() {
   const stravaAuthUrl = `https://www.strava.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&approval_prompt=auto&scope=read,activity:read_all`
 
   const totalDistanceKm = (rides.reduce((acc, r) => acc + (r.distance || 0), 0) / 1000).toFixed(1)
-  const roiData = calculateROI(rides, bikePriceInput)
-  const chartData = prepareChartData(rides)
+  const roiData = calculateROI(rides, bikePriceInput, commuteCostInput)
+  const chartData = prepareChartData(rides, commuteCostInput)
+  const totalCalories = Math.round(rides.reduce((total, ride) => total + (Number(ride.calories) || 0), 0))
 
   return (
     <main className="min-h-screen bg-slate-50 px-2 py-4 md:p-8 relative">
@@ -284,6 +300,7 @@ export default function DashboardPage() {
           totalRides={rides.length} 
           totalDistanceKm={totalDistanceKm} 
           estimatedSavings={roiData.estimatedSavings} 
+          totalCalories={totalCalories}
         />
 
         <BikeROICard 
@@ -293,6 +310,8 @@ export default function DashboardPage() {
           bikePriceInput={bikePriceInput}
           handleBikePriceChange={handleBikePriceChange}
           handleBikePriceBlur={handleBikePriceBlur}
+          commuteCostInput={commuteCostInput}
+          handleCommuteCostChange={handleCommuteCostChange}
         />
 
         <SettingsPanel 
