@@ -15,6 +15,7 @@ import { WeeklyChart } from './_components/WeeklyChart'
 import { RideList } from './_components/RideList'
 import { MaintenanceCard } from './_components/MaintenanceCard'
 import { RideHeatmap } from './_components/RideHeatmap'
+import { RideAdviceCard } from './_components/RideAdviceCard'
 
 // Utils & Types
 import { Ride, formatDateCN, calculateROI, prepareChartData } from './_lib/utils'
@@ -290,6 +291,8 @@ export default function DashboardPage() {
           </div>
           <div className="flex shrink-0 items-center gap-2"><Link href="/settings" title={lang === 'zh' ? '\u8bbe\u7f6e' : 'Settings'} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-sm text-slate-500 sm:hidden">⚙</Link><Link href="/settings" className="hidden text-xs font-semibold text-slate-500 hover:text-sky-600 sm:inline">{lang === 'zh' ? '\u8bbe\u7f6e' : 'Settings'}</Link><LanguageSwitcher /><div className="hidden text-right text-xs text-slate-400 md:block">{user?.email}</div></div>
         </div>
+
+        <RideAdviceCard />
 
         <StatsGrid 
           totalRides={rides.length} 
