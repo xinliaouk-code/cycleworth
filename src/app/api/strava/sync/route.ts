@@ -197,6 +197,7 @@ export async function POST(request: Request) {
           updateData.category = category
         }
         updateData.id = matchedRecord.id
+        updateData.user_id = userId
         rowsToUpdate.push(updateData)
       } else {
         rowsToInsert.push({
@@ -211,7 +212,9 @@ export async function POST(request: Request) {
 
     // 批量 upsert：一次请求更新所有已存在的骑行
     if (rowsToUpdate.length > 0) {
-      const { error } = await supabase.from('rides').upsert(rowsToUpdate)
+      const { error } = await supabase
+        .from('rides')
+        .upsert(rowsToUpdate, { onConflict: 'id' })
       if (error) throw error
     }
 
