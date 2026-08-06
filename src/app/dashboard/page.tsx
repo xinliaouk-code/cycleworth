@@ -371,7 +371,7 @@ export default function DashboardPage() {
                   {formatDateCN(selectedRide.start_date, lang)}
                 </p>
                 <p className="text-xs text-slate-500 mt-1">
-                  🚲 {(selectedRide.distance / 1000).toFixed(2)} km · 🕒 {Math.round(selectedRide.moving_time / 60)} {rideDetails.minutes} · 🔥 {Math.round(Number(selectedRide.calories) || 0).toLocaleString()} kcal
+                  📏 {(selectedRide.distance / 1000).toFixed(2)} km · 🕒 {Math.round(selectedRide.moving_time / 60)} {rideDetails.minutes} · 🔥 {Math.round(Number(selectedRide.calories) || 0).toLocaleString()} kcal
                 </p>
               </div>
               <button 
