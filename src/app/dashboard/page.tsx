@@ -21,6 +21,46 @@ const RideMap = dynamic<{ polyline: string }>(
   { ssr: false }
 )
 
+// 读取本地缓存的多站点/购车设置，作为 useState 的惰性初始值。
+// 放在组件外：只在首次渲染求值一次，避免在 effect 里同步 setState
+// （react-hooks/set-state-in-effect），也让授权回跳后的首次同步即用到
+// 用户已保存的站点设置。
+function loadCommuteSettings() {
+  const fallback = {
+    homeStation: 'Custom House, Royal Victoria',
+    officeStation: 'Bank, Old Street',
+    morningStart: '7',
+    morningEnd: '10',
+    eveningStart: '16',
+    eveningEnd: '20'
+  }
+  if (typeof window === 'undefined') return fallback
+  try {
+    const raw = localStorage.getItem('cw_commute_settings')
+    if (!raw) return fallback
+    const p = JSON.parse(raw)
+    return {
+      homeStation: p.homeStation ?? fallback.homeStation,
+      officeStation: p.officeStation ?? fallback.officeStation,
+      morningStart: p.morningStart ?? fallback.morningStart,
+      morningEnd: p.morningEnd ?? fallback.morningEnd,
+      eveningStart: p.eveningStart ?? fallback.eveningStart,
+      eveningEnd: p.eveningEnd ?? fallback.eveningEnd
+    }
+  } catch {
+    return fallback
+  }
+}
+
+function loadBikePrice() {
+  if (typeof window === 'undefined') return '500'
+  try {
+    return localStorage.getItem('cw_bike_price') ?? '500'
+  } catch {
+    return '500'
+  }
+}
+
 export default function DashboardPage() {
   const router = useRouter()
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null)
@@ -36,39 +76,20 @@ export default function DashboardPage() {
   const [collapseChart, setCollapseChart] = useState(false)
   const [collapseRides, setCollapseRides] = useState(false)
 
-  // 自定义多站点设置
-  const [homeStation, setHomeStation] = useState('Custom House, Royal Victoria')
-  const [officeStation, setOfficeStation] = useState('Bank, Old Street')
-  const [morningStart, setMorningStart] = useState('7')
-  const [morningEnd, setMorningEnd] = useState('10')
-  const [eveningStart, setEveningStart] = useState('16')
-  const [eveningEnd, setEveningEnd] = useState('20')
+  // 自定义多站点设置（惰性初始化：从本地缓存读取一次）
+  const initialSettings = loadCommuteSettings()
+  const [homeStation, setHomeStation] = useState(initialSettings.homeStation)
+  const [officeStation, setOfficeStation] = useState(initialSettings.officeStation)
+  const [morningStart, setMorningStart] = useState(initialSettings.morningStart)
+  const [morningEnd, setMorningEnd] = useState(initialSettings.morningEnd)
+  const [eveningStart, setEveningStart] = useState(initialSettings.eveningStart)
+  const [eveningEnd, setEveningEnd] = useState(initialSettings.eveningEnd)
 
-  // 🚲 Bike ROI 购车成本设置
-  const [bikePriceInput, setBikePriceInput] = useState<string>('500')
+  // 🚲 Bike ROI 购车成本设置（惰性初始化）
+  const [bikePriceInput, setBikePriceInput] = useState<string>(loadBikePrice)
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null)
 
-  useEffect(() => {
-    const savedSettings = localStorage.getItem('cw_commute_settings')
-    if (savedSettings) {
-      try {
-        const parsed = JSON.parse(savedSettings)
-        if (parsed.homeStation) setHomeStation(parsed.homeStation)
-        if (parsed.officeStation) setOfficeStation(parsed.officeStation)
-        if (parsed.morningStart) setMorningStart(parsed.morningStart)
-        if (parsed.morningEnd) setMorningEnd(parsed.morningEnd)
-        if (parsed.eveningStart) setEveningStart(parsed.eveningStart)
-        if (parsed.eveningEnd) setEveningEnd(parsed.eveningEnd)
-      } catch (e) {}
-    }
-
-    const savedPrice = localStorage.getItem('cw_bike_price')
-    if (savedPrice) {
-      setBikePriceInput(savedPrice)
-    }
-  }, [])
-
-  useEffect(() => {
+    useEffect(() => {
     async function init() {
       const { data: { session } } = await supabase.auth.getSession()
       const user = session?.user ?? null
@@ -91,6 +112,7 @@ export default function DashboardPage() {
       }
     }
     init()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router])
 
   async function fetchUserSettings(userId: string) {
@@ -126,7 +148,7 @@ export default function DashboardPage() {
         setSyncMsg('授权处理失败：' + (errData.error || '未知错误'))
         setIsSyncing(false)
       }
-    } catch (error) {
+    } catch {
       setSyncMsg('请求异常，请检查网络')
       setIsSyncing(false)
     }
@@ -195,7 +217,7 @@ export default function DashboardPage() {
       } else {
         setSyncMsg('同步失败：' + (result.error || '未知错误'))
       }
-    } catch (err) {
+    } catch {
       setSyncMsg('同步请求发起失败')
     } finally {
       setIsSyncing(false)
