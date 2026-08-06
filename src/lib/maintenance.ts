@@ -12,6 +12,31 @@ export type MaintenanceTask = {
 }
 
 export type MaintenanceStatus = '\u826f\u597d' | '\u5373\u5c06\u5230\u671f' | '\u5230\u671f' | '\u903e\u671f'
+export type MaintenanceLanguage = 'en' | 'zh'
+
+const maintenanceNames: Record<string, { en: string; zh: string }> = {
+  tyre_pressure: { en: 'Check tyre pressure', zh: '\u68c0\u67e5\u8f6e\u80ce\u6c14\u538b' },
+  chain_clean: { en: 'Clean and lubricate chain', zh: '\u6e05\u6d01\u5e76\u6da6\u6ed1\u94fe\u6761' },
+  tyre_inspection: { en: 'Inspect tyres for wear and debris', zh: '\u68c0\u67e5\u8f6e\u80ce\u78e8\u635f\u4e0e\u5f02\u7269' },
+  brake_pads: { en: 'Inspect brake pads', zh: '\u68c0\u67e5\u5239\u8f66\u7247' },
+  chain_wear: { en: 'Check chain wear with a gauge', zh: '\u4f7f\u7528\u94fe\u6761\u5c3a\u68c0\u67e5\u94fe\u6761\u78e8\u635f' },
+  safety_check: { en: 'Basic bicycle safety inspection', zh: '\u57fa\u7840\u81ea\u884c\u8f66\u5b89\u5168\u68c0\u67e5' },
+  full_service: { en: 'Full bicycle service', zh: '\u5b8c\u6574\u81ea\u884c\u8f66\u4fdd\u517b' },
+}
+
+export function maintenanceName(task: Pick<MaintenanceTask, 'task_type' | 'display_name'>, lang: MaintenanceLanguage) {
+  return maintenanceNames[task.task_type]?.[lang] ?? task.display_name
+}
+
+export function maintenanceStatusText(status: MaintenanceStatus, lang: MaintenanceLanguage) {
+  const labels: Record<MaintenanceStatus, { en: string; zh: string }> = {
+    '\u826f\u597d': { en: 'Good', zh: '\u826f\u597d' },
+    '\u5373\u5c06\u5230\u671f': { en: 'Due soon', zh: '\u5373\u5c06\u5230\u671f' },
+    '\u5230\u671f': { en: 'Due', zh: '\u5230\u671f' },
+    '\u903e\u671f': { en: 'Overdue', zh: '\u903e\u671f' },
+  }
+  return labels[status][lang]
+}
 
 export const defaultMaintenanceTasks = [
   ['tyre_pressure', '\u68c0\u67e5\u8f6e\u80ce\u6c14\u538b', null, 7],
