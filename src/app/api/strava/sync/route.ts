@@ -21,7 +21,8 @@ export async function POST(request: Request) {
       morningStart = 7,
       morningEnd = 10,
       eveningStart = 16,
-      eveningEnd = 20
+      eveningEnd = 20,
+      fullResync = false
     } = await request.json()
 
     // 🔐 服务端校验会话，杜绝客户端伪造/越权（user_id 一律以登录态为准）
@@ -86,15 +87,19 @@ export async function POST(request: Request) {
       }
     }
 
-    // ── 改动 5：增量同步 ──
-    // 先取该用户已同步的最新活动时间作为基线，只拉取其后的新增 Strava 活动。
-    const { data: latestRow } = await supabase
-      .from('rides')
-      .select('start_date')
-      .eq('user_id', userId)
-      .order('start_date', { ascending: false })
-      .limit(1)
-      .maybeSingle()
+    // ── 增量同步 ──
+    // 增量模式：取该用户已同步的最新活动时间作为基线，只拉取其后新增活动。
+    // fullResync 模式：忽略基线，全量拉取历史活动以重算站点与分类。
+    const useIncremental = !fullResync
+    const { data: latestRow } = useIncremental
+      ? await supabase
+          .from('rides')
+          .select('start_date')
+          .eq('user_id', userId)
+          .order('start_date', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      : { data: null }
 
     const lastSyncedAt = latestRow?.start_date
       ? new Date(latestRow.start_date).getTime() / 1000
@@ -103,12 +108,11 @@ export async function POST(request: Request) {
     let page = 1
     const perPage = 100
     const allActivities: any[] = []
-    let reachedBaseline = false
 
-    while (!reachedBaseline) {
+    while (true) {
       let url = `https://www.strava.com/api/v3/athlete/activities?page=${page}&per_page=${perPage}`
-      // Strava 支持 after（epoch 秒）。有基线时用它只拉增量，大幅减少翻页与 API 配额。
-      if (lastSyncedAt) url += `&after=${Math.floor(lastSyncedAt)}`
+      // Strava 支持 after（epoch 秒）。增量模式有基线时用它只拉新增，减少翻页与配额。
+      if (useIncremental && lastSyncedAt) url += `&after=${Math.floor(lastSyncedAt)}`
 
       const stravaRes = await fetch(url, {
         headers: { Authorization: `Bearer ${currentAccessToken}` }
@@ -119,12 +123,15 @@ export async function POST(request: Request) {
       if (!Array.isArray(activities) || activities.length === 0) break
 
       allActivities.push(...activities)
-      if (activities.length < perPage || !lastSyncedAt) break
+      if (activities.length < perPage) break
 
-      // 兜底：即使未用 after，也尽早停在与基线重叠的旧活动上，避免拉全量。
-      reachedBaseline = activities.some(
-        (a: any) => a.start_date && new Date(a.start_date).getTime() / 1000 <= lastSyncedAt
-      )
+      // 增量模式：尽早停在与基线重叠的旧活动上，避免拉全量。
+      if (useIncremental && lastSyncedAt) {
+        const reachedBaseline = activities.some(
+          (a: any) => a.start_date && new Date(a.start_date).getTime() / 1000 <= lastSyncedAt
+        )
+        if (reachedBaseline) break
+      }
       page++
     }
 

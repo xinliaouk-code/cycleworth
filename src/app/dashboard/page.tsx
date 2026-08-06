@@ -177,18 +177,20 @@ export default function DashboardPage() {
     if (error && user) fetchRides(user.id)
   }
 
-  async function handleSyncInternal(accessToken: string | undefined, userId: string) {
+  async function handleSyncInternal(accessToken: string | undefined, userId: string, fullResync = false) {
     try {
       const res = await fetch('/api/strava/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          accessToken, homeStation, officeStation, morningStart, morningEnd, eveningStart, eveningEnd
+          accessToken, homeStation, officeStation, morningStart, morningEnd, eveningStart, eveningEnd, fullResync
         })
       })
       const result = await res.json()
       if (result.success) {
-        setSyncMsg(`同步完成！已按规则识别类别，并完美保留你的手动修改。`)
+        setSyncMsg(fullResync
+          ? `全量重算完成！已用最新站点库重新计算全部 ${result.count} 条骑行分类。`
+          : `同步完成！已按规则识别类别，并完美保留你的手动修改。`)
         fetchRides(userId)
       } else {
         setSyncMsg('同步失败：' + (result.error || '未知错误'))
@@ -198,6 +200,15 @@ export default function DashboardPage() {
     } finally {
       setIsSyncing(false)
     }
+  }
+
+  // 全量重算：忽略增量基线，重新拉取 Strava 全部历史并按最新站点库重算分类
+  async function handleFullResync() {
+    if (!user) return
+    setIsSyncing(true)
+    setSyncMsg('正在全量重算：会重新拉取全部历史骑行并按最新站点库归类，可能需要几分钟...')
+    const { data: { session } } = await supabase.auth.getSession()
+    await handleSyncInternal(session?.access_token, user.id, true)
   }
 
   function handleSaveSettings() {
@@ -278,6 +289,7 @@ export default function DashboardPage() {
           isConnected={isConnected}
           stravaAuthUrl={stravaAuthUrl}
           handleSync={handleSync}
+          handleFullResync={handleFullResync}
           isSyncing={isSyncing}
         />
 

@@ -8,6 +8,7 @@ interface SyncStatusProps {
   isConnected: boolean
   stravaAuthUrl: string
   handleSync: () => void
+  handleFullResync: () => void
   isSyncing: boolean
 }
 
@@ -17,6 +18,7 @@ export function SyncStatus({
   isConnected,
   stravaAuthUrl,
   handleSync,
+  handleFullResync,
   isSyncing
 }: SyncStatusProps) {
   return (
@@ -49,6 +51,14 @@ export function SyncStatus({
               className="text-center px-3 py-1.5 bg-sky-600 text-white text-xs font-medium rounded-xl hover:bg-sky-700 disabled:opacity-50 cursor-pointer"
             >
               {isSyncing ? '同步中...' : '同步记录'}
+            </button>
+            <button
+              onClick={handleFullResync}
+              disabled={isSyncing}
+              className="text-center px-3 py-1.5 bg-violet-600 text-white text-xs font-medium rounded-xl hover:bg-violet-700 disabled:opacity-50 cursor-pointer"
+              title="忽略增量、重新拉取全部历史并按最新站点库重算分类"
+            >
+              {isSyncing ? '重算中...' : '全量重算'}
             </button>
           </div>
         )}
