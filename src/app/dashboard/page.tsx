@@ -64,15 +64,6 @@ function loadBikePrice() {
   }
 }
 
-function loadCommuteCost() {
-  if (typeof window === 'undefined') return '3.1'
-  try {
-    return localStorage.getItem('cw_commute_cost') ?? '3.1'
-  } catch {
-    return '3.1'
-  }
-}
-
 export default function DashboardPage() {
   const { t, lang } = useLanguage()
   const router = useRouter()
@@ -100,7 +91,6 @@ export default function DashboardPage() {
 
   // 🚲 Bike ROI 购车成本设置（惰性初始化）
   const [bikePriceInput, setBikePriceInput] = useState<string>(loadBikePrice)
-  const [commuteCostInput, setCommuteCostInput] = useState<string>(loadCommuteCost)
   const [fareSettings, setFareSettings] = useState(DEFAULT_TFL_FARE_SETTINGS)
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null)
 
@@ -145,8 +135,6 @@ export default function DashboardPage() {
     if (data?.tfl_fare_settings) {
       const savedFareSettings = parseTfLFareSettings(data.tfl_fare_settings)
       setFareSettings(savedFareSettings)
-      setCommuteCostInput(savedFareSettings.fallbackFare.toString())
-      localStorage.setItem('cw_commute_cost', savedFareSettings.fallbackFare.toString())
     }
   }
 
@@ -265,12 +253,6 @@ export default function DashboardPage() {
     localStorage.setItem('cw_bike_price', price)
   }
 
-  function handleCommuteCostChange(cost: string) {
-    setCommuteCostInput(cost)
-    setFareSettings(current => ({ ...current, fallbackFare: Math.max(0, Number.parseFloat(cost) || 0) }))
-    localStorage.setItem('cw_commute_cost', cost)
-  }
-
   async function handleBikePriceBlur() {
     if (!user) return
     const priceNum = parseFloat(bikePriceInput) || 0
@@ -304,7 +286,7 @@ export default function DashboardPage() {
             <h1 className="text-2xl font-bold text-slate-800 tracking-tight">CycleWorth</h1>
             <p className="text-sm text-slate-500 mt-0.5">{t.tagline}</p>
           </div>
-          <div className="flex items-center gap-3"><Link href="/settings" className="text-xs font-semibold text-slate-500 hover:text-sky-600">Settings</Link><LanguageSwitcher /><div className="text-right text-xs text-slate-400">{user?.email}</div></div>
+          <div className="flex items-center gap-3"><Link href="/settings" className="text-xs font-semibold text-slate-500 hover:text-sky-600">{lang === 'zh' ? '\u8bbe\u7f6e' : 'Settings'}</Link><LanguageSwitcher /><div className="text-right text-xs text-slate-400">{user?.email}</div></div>
         </div>
 
         <StatsGrid 
@@ -321,8 +303,6 @@ export default function DashboardPage() {
           bikePriceInput={bikePriceInput}
           handleBikePriceChange={handleBikePriceChange}
           handleBikePriceBlur={handleBikePriceBlur}
-          commuteCostInput={commuteCostInput}
-          handleCommuteCostChange={handleCommuteCostChange}
         />
 
         <SettingsPanel 
