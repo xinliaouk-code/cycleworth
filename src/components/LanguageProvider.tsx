@@ -36,6 +36,6 @@ export function useLanguage() {
 }
 
 export function LanguageSwitcher() {
-  const { lang, setLang, t } = useLanguage()
-  return <button onClick={() => setLang(lang === 'en' ? 'zh' : 'en')} className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">{t.language}</button>
+  const { lang, setLang } = useLanguage()
+  return <button onClick={() => setLang(lang === 'en' ? 'zh' : 'en')} className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">{lang === 'en' ? '\u4e2d\u6587' : 'EN'}</button>
 }
