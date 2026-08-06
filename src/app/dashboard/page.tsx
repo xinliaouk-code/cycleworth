@@ -282,6 +282,7 @@ export default function DashboardPage() {
   const roiData = calculateROI(rides, bikePriceInput, fareSettings, lang)
   const chartData = prepareChartData(rides, fareSettings)
   const totalCalories = Math.round(rides.reduce((total, ride) => total + (Number(ride.calories) || 0), 0))
+  const syncFailed = syncMsg.includes('\u5931\u8d25') || syncMsg.toLowerCase().includes('failed')
   const sectionOrder = (id: import('../../lib/dashboard-layout').DashboardSection) => dashboardLayout.order.indexOf(id)
   const isSectionVisible = (id: import('../../lib/dashboard-layout').DashboardSection) => !dashboardLayout.hidden.includes(id)
   const rideDetails = lang === 'zh' ? { title: '\u9a91\u884c\u8def\u7ebf\u8be6\u60c5', start: '\u8d77\u70b9\u7ad9', end: '\u7ec8\u70b9\u7ad9', unknown: '\u672a\u77e5', minutes: '\u5206\u949f' } : { title: 'Ride details', start: 'Start station', end: 'End station', unknown: 'Unknown', minutes: 'min' }
@@ -337,6 +338,7 @@ export default function DashboardPage() {
           handleSync={handleSync}
           handleFullResync={handleFullResync}
           isSyncing={isSyncing}
+          errorMessage={syncFailed ? syncMsg : undefined}
         /></div>}
 
         {syncMsg && (
