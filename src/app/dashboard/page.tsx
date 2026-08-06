@@ -354,7 +354,7 @@ export default function DashboardPage() {
 
       {selectedRide && (
         <div onClick={() => setSelectedRide(null)} className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 backdrop-blur-xs transition-all md:items-center md:p-4">
-          <div onClick={event => event.stopPropagation()} className="w-full animate-in slide-in-from-bottom rounded-t-3xl border border-slate-100 bg-white p-6 shadow-2xl fade-in duration-200 md:w-[480px] md:rounded-2xl">
+          <div onClick={event => event.stopPropagation()} className="w-full animate-in slide-in-from-bottom space-y-4 rounded-t-3xl border border-slate-100 bg-white p-6 shadow-2xl fade-in duration-200 md:w-[480px] md:rounded-2xl">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-bold text-slate-800 text-lg truncate max-w-[280px]">
