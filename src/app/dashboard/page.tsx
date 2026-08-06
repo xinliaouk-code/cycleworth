@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { supabase } from '../../lib/supabase'
 
@@ -16,6 +17,7 @@ import { RideList } from './_components/RideList'
 // Utils & Types
 import { Ride, formatDateCN, calculateROI, prepareChartData } from './_lib/utils'
 import { LanguageSwitcher, useLanguage } from '../../components/LanguageProvider'
+import { DEFAULT_TFL_FARE_SETTINGS, parseTfLFareSettings } from '../../lib/tfl/fares'
 
 const RideMap = dynamic<{ polyline: string }>(
   () => import('../../components/RideMap'), 
@@ -63,11 +65,11 @@ function loadBikePrice() {
 }
 
 function loadCommuteCost() {
-  if (typeof window === 'undefined') return '3.9'
+  if (typeof window === 'undefined') return '3.1'
   try {
-    return localStorage.getItem('cw_commute_cost') ?? '3.9'
+    return localStorage.getItem('cw_commute_cost') ?? '3.1'
   } catch {
-    return '3.9'
+    return '3.1'
   }
 }
 
@@ -99,6 +101,7 @@ export default function DashboardPage() {
   // 🚲 Bike ROI 购车成本设置（惰性初始化）
   const [bikePriceInput, setBikePriceInput] = useState<string>(loadBikePrice)
   const [commuteCostInput, setCommuteCostInput] = useState<string>(loadCommuteCost)
+  const [fareSettings, setFareSettings] = useState(DEFAULT_TFL_FARE_SETTINGS)
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null)
 
     useEffect(() => {
@@ -130,7 +133,7 @@ export default function DashboardPage() {
   async function fetchUserSettings(userId: string) {
     const { data } = await supabase
       .from('settings')
-      .select('bike_price')
+      .select('bike_price, tfl_fare_settings')
       .eq('id', userId)
       .maybeSingle()
 
@@ -138,6 +141,12 @@ export default function DashboardPage() {
       const priceStr = data.bike_price.toString()
       setBikePriceInput(priceStr)
       localStorage.setItem('cw_bike_price', priceStr)
+    }
+    if (data?.tfl_fare_settings) {
+      const savedFareSettings = parseTfLFareSettings(data.tfl_fare_settings)
+      setFareSettings(savedFareSettings)
+      setCommuteCostInput(savedFareSettings.fallbackFare.toString())
+      localStorage.setItem('cw_commute_cost', savedFareSettings.fallbackFare.toString())
     }
   }
 
@@ -258,6 +267,7 @@ export default function DashboardPage() {
 
   function handleCommuteCostChange(cost: string) {
     setCommuteCostInput(cost)
+    setFareSettings(current => ({ ...current, fallbackFare: Math.max(0, Number.parseFloat(cost) || 0) }))
     localStorage.setItem('cw_commute_cost', cost)
   }
 
@@ -281,8 +291,8 @@ export default function DashboardPage() {
   const stravaAuthUrl = `https://www.strava.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&approval_prompt=auto&scope=read,activity:read_all`
 
   const totalDistanceKm = (rides.reduce((acc, r) => acc + (r.distance || 0), 0) / 1000).toFixed(1)
-  const roiData = calculateROI(rides, bikePriceInput, commuteCostInput, lang)
-  const chartData = prepareChartData(rides, commuteCostInput)
+  const roiData = calculateROI(rides, bikePriceInput, fareSettings, lang)
+  const chartData = prepareChartData(rides, fareSettings)
   const totalCalories = Math.round(rides.reduce((total, ride) => total + (Number(ride.calories) || 0), 0))
   const rideDetails = lang === 'zh' ? { title: '\u9a91\u884c\u8def\u7ebf\u8be6\u60c5', start: '\u8d77\u70b9\u7ad9', end: '\u7ec8\u70b9\u7ad9', unknown: '\u672a\u77e5', minutes: '\u5206\u949f' } : { title: 'Ride details', start: 'Start station', end: 'End station', unknown: 'Unknown', minutes: 'min' }
 
@@ -294,7 +304,7 @@ export default function DashboardPage() {
             <h1 className="text-2xl font-bold text-slate-800 tracking-tight">CycleWorth</h1>
             <p className="text-sm text-slate-500 mt-0.5">{t.tagline}</p>
           </div>
-          <div className="flex items-center gap-3"><LanguageSwitcher /><div className="text-right text-xs text-slate-400">{user?.email}</div></div>
+          <div className="flex items-center gap-3"><Link href="/settings" className="text-xs font-semibold text-slate-500 hover:text-sky-600">Settings</Link><LanguageSwitcher /><div className="text-right text-xs text-slate-400">{user?.email}</div></div>
         </div>
 
         <StatsGrid 
@@ -352,7 +362,7 @@ export default function DashboardPage() {
 
         <RideList 
           rides={rides}
-          commuteCostInput={commuteCostInput}
+          fareSettings={fareSettings}
           collapseRides={collapseRides}
           setCollapseRides={setCollapseRides}
           setSelectedRide={setSelectedRide}
