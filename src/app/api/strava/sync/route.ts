@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { verifySession } from '../../../../lib/auth'
 
 const TUBE_STATIONS = [
   // --- Jubilee Line ---
@@ -194,7 +195,7 @@ function classifyRide(
 export async function POST(request: Request) {
   try {
     const { 
-      userId, 
+      accessToken,
       homeStation = 'Custom House, Royal Victoria', 
       officeStation = 'Bank, Old Street',
       morningStart = 7,
@@ -203,8 +204,10 @@ export async function POST(request: Request) {
       eveningEnd = 20
     } = await request.json()
 
+    // 🔐 服务端校验会话，杜绝客户端伪造/越权（user_id 一律以登录态为准）
+    const userId = await verifySession(accessToken)
     if (!userId) {
-      return NextResponse.json({ error: '请求中缺少 userId' }, { status: 400 })
+      return NextResponse.json({ error: '未登录或会话已过期' }, { status: 401 })
     }
 
     const settings: CommuteSettings = {
@@ -243,7 +246,7 @@ export async function POST(request: Request) {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
           client_id: process.env.NEXT_PUBLIC_STRAVA_CLIENT_ID!,
-          client_secret: process.env.NEXT_PUBLIC_STRAVA_CLIENT_SECRET!,
+          client_secret: process.env.STRAVA_CLIENT_SECRET!,
           grant_type: 'refresh_token',
           refresh_token: conn.refresh_token
         }).toString()

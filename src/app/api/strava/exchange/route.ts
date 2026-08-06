@@ -1,9 +1,16 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { verifySession } from '../../../../lib/auth'
 
 export async function POST(request: Request) {
   try {
-    const { code, userId } = await request.json()
+    const { code, accessToken } = await request.json()
+
+    // 🔐 服务端校验会话，杜绝客户端伪造/越权（user_id 一律以登录态为准）
+    const userId = await verifySession(accessToken)
+    if (!userId) {
+      return NextResponse.json({ error: '未登录或会话已过期' }, { status: 401 })
+    }
 
     const params = new URLSearchParams()
     params.append('client_id', process.env.NEXT_PUBLIC_STRAVA_CLIENT_ID!)

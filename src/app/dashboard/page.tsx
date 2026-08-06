@@ -70,19 +70,20 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { session } } = await supabase.auth.getSession()
+      const user = session?.user ?? null
       if (!user) {
         router.push('/login')
         return
       }
-      
-      // @ts-ignore
+
       setUser(user)
+      const accessToken = session?.access_token
 
       const urlParams = new URLSearchParams(window.location.search)
       const code = urlParams.get('code')
       if (code) {
-        await handleExchangeCode(code, user.id)
+        await handleExchangeCode(code, user.id, accessToken)
       } else {
         await checkExistingConnection(user.id)
         await fetchRides(user.id)
@@ -106,19 +107,19 @@ export default function DashboardPage() {
     }
   }
 
-  async function handleExchangeCode(code: string, userId: string) {
+  async function handleExchangeCode(code: string, userId: string, accessToken?: string) {
     setSyncMsg('正在处理 Strava 授权并同步最新记录...')
     setIsSyncing(true)
     try {
       const res = await fetch('/api/strava/exchange', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, userId })
+        body: JSON.stringify({ code, accessToken })
       })
       if (res.ok) {
         setIsConnected(true)
         window.history.replaceState({}, document.title, '/dashboard')
-        await handleSyncInternal(userId)
+        await handleSyncInternal(accessToken, userId)
         await fetchUserSettings(userId)
       } else {
         const errData = await res.json()
@@ -176,13 +177,13 @@ export default function DashboardPage() {
     if (error && user) fetchRides(user.id)
   }
 
-  async function handleSyncInternal(userId: string) {
+  async function handleSyncInternal(accessToken: string | undefined, userId: string) {
     try {
       const res = await fetch('/api/strava/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          userId, homeStation, officeStation, morningStart, morningEnd, eveningStart, eveningEnd
+          accessToken, homeStation, officeStation, morningStart, morningEnd, eveningStart, eveningEnd
         })
       })
       const result = await res.json()
@@ -216,11 +217,12 @@ export default function DashboardPage() {
     await supabase.from('settings').upsert({ id: user.id, bike_price: priceNum }, { onConflict: 'id' })
   }
 
-  const handleSync = () => {
+  const handleSync = async () => {
     if (!user) return
     setIsSyncing(true)
     setSyncMsg('正在从 Strava 同步最新骑行数据...')
-    handleSyncInternal(user.id)
+    const { data: { session } } = await supabase.auth.getSession()
+    await handleSyncInternal(session?.access_token, user.id)
   }
 
   const DOMAIN = "https://cycleworth.vercel.app"
