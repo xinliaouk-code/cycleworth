@@ -1,4 +1,17 @@
+import { getTfLSingleFare } from '../../../lib/tfl/fares'
+import { getStationCoordinates } from '../../../lib/strava/stations'
+
 export type Ride = { id: string; name: string; distance: number; calories?: number | null; moving_time: number; start_date: string; is_commute: boolean; category?: string; is_manual_override?: boolean; start_station?: string; end_station?: string; summary_polyline: string }
+
+export function getRideSaving(ride: Ride, fallbackCostInput: string) {
+  const fallback = Math.max(0, Number.parseFloat(fallbackCostInput) || 0)
+  const fare = getTfLSingleFare(
+    { station: ride.start_station, ...getStationCoordinates(ride.start_station ?? '') },
+    { station: ride.end_station, ...getStationCoordinates(ride.end_station ?? '') },
+    ride.start_date,
+  )
+  return fare?.amount ?? fallback
+}
 
 export function formatDateCN(dateStr: string, lang: 'en' | 'zh' = 'zh') {
   const date = new Date(dateStr)
@@ -15,7 +28,7 @@ export function getWeekKey(dateStr: string) {
 
 export function calculateROI(rides: Ride[], bikePriceInput: string, commuteCostInput: string, lang: 'en' | 'zh') {
   const commuteCost = Math.max(0, Number.parseFloat(commuteCostInput) || 0)
-  const savingsNum = rides.filter(ride => ride.is_commute).length * commuteCost
+  const savingsNum = rides.filter(ride => ride.is_commute).reduce((sum, ride) => sum + getRideSaving(ride, commuteCostInput), 0)
   const estimatedSavings = savingsNum.toFixed(2)
   const priceNum = Number.parseFloat(bikePriceInput) || 0
   const roiPercentageNum = priceNum > 0 ? (savingsNum / priceNum) * 100 : 0
@@ -42,8 +55,7 @@ export function calculateROI(rides: Ride[], bikePriceInput: string, commuteCostI
 }
 
 export function prepareChartData(rides: Ride[], commuteCostInput: string) {
-  const commuteCost = Math.max(0, Number.parseFloat(commuteCostInput) || 0)
   const weeks = new Map<string, { distance: number; savings: number }>()
-  rides.forEach(ride => { if (!ride.start_date) return; const key = getWeekKey(ride.start_date); const value = weeks.get(key) || { distance: 0, savings: 0 }; value.distance += (ride.distance || 0) / 1000; if (ride.is_commute) value.savings += commuteCost; weeks.set(key, value) })
+  rides.forEach(ride => { if (!ride.start_date) return; const key = getWeekKey(ride.start_date); const value = weeks.get(key) || { distance: 0, savings: 0 }; value.distance += (ride.distance || 0) / 1000; if (ride.is_commute) value.savings += getRideSaving(ride, commuteCostInput); weeks.set(key, value) })
   return [...weeks.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([shortWeek, value]) => ({ shortWeek, distance: Number(value.distance.toFixed(1)), savings: Number(value.savings.toFixed(2)) }))
 }

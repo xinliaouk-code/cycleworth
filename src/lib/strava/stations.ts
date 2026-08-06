@@ -4,6 +4,11 @@ export type Station = {
   lng: number;
 }
 
+export function getStationCoordinates(name: string) {
+  const station = TUBE_STATIONS.find(item => item.name.toLowerCase() === name.toLowerCase())
+  return station ? { lat: station.lat, lng: station.lng } : undefined
+}
+
 export const TUBE_STATIONS: Station[] = [
   // --- Jubilee Line ---
   { name: "Stanmore", lat: 51.6195, lng: -0.3041 },
