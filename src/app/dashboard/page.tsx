@@ -15,6 +15,7 @@ import { RideList } from './_components/RideList'
 
 // Utils & Types
 import { Ride, formatDateCN, calculateROI, prepareChartData } from './_lib/utils'
+import { LanguageSwitcher, useLanguage } from '../../components/LanguageProvider'
 
 const RideMap = dynamic<{ polyline: string }>(
   () => import('../../components/RideMap'), 
@@ -62,6 +63,7 @@ function loadBikePrice() {
 }
 
 export default function DashboardPage() {
+  const { t } = useLanguage()
   const router = useRouter()
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null)
   const [isConnected, setIsConnected] = useState(false)
@@ -273,9 +275,9 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between px-1">
           <div>
             <h1 className="text-2xl font-bold text-slate-800 tracking-tight">CycleWorth</h1>
-            <p className="text-sm text-slate-500 mt-0.5">Every ride has value.</p>
+            <p className="text-sm text-slate-500 mt-0.5">{t.tagline}</p>
           </div>
-          <div className="text-right text-xs text-slate-400">{user?.email}</div>
+          <div className="flex items-center gap-3"><LanguageSwitcher /><div className="text-right text-xs text-slate-400">{user?.email}</div></div>
         </div>
 
         <StatsGrid 

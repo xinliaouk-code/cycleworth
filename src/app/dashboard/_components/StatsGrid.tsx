@@ -1,30 +1,15 @@
-import React from 'react'
+'use client'
 
-interface StatsGridProps {
-  totalRides: number
-  totalDistanceKm: string
-  estimatedSavings: string
-}
+import { useLanguage } from '../../../components/LanguageProvider'
+
+interface StatsGridProps { totalRides: number; totalDistanceKm: string; estimatedSavings: string }
 
 export function StatsGrid({ totalRides, totalDistanceKm, estimatedSavings }: StatsGridProps) {
-  return (
-    <div className="grid grid-cols-3 gap-2 md:gap-4">
-      <div className="bg-white p-3.5 md:p-6 rounded-2xl shadow-sm border border-slate-100">
-        <p className="text-xs md:text-sm font-medium text-slate-400">总骑行次数</p>
-        <p className="text-xl md:text-3xl font-bold text-slate-800 mt-1 md:mt-2">
-          {totalRides} <span className="text-xs md:text-sm font-normal text-slate-500">次</span>
-        </p>
-      </div>
-      <div className="bg-white p-3.5 md:p-6 rounded-2xl shadow-sm border border-slate-100">
-        <p className="text-xs md:text-sm font-medium text-slate-400">总骑行距离</p>
-        <p className="text-xl md:text-3xl font-bold text-slate-800 mt-1 md:mt-2">
-          {totalDistanceKm} <span className="text-xs md:text-sm font-normal text-slate-500">km</span>
-        </p>
-      </div>
-      <div className="bg-white p-3.5 md:p-6 rounded-2xl shadow-sm border border-slate-100 bg-gradient-to-br from-sky-50 to-white">
-        <p className="text-xs md:text-sm font-medium text-sky-600">已节省开支</p>
-        <p className="text-xl md:text-3xl font-bold text-sky-700 mt-1 md:mt-2">£{estimatedSavings}</p>
-      </div>
-    </div>
-  )
+  const { t } = useLanguage()
+  const stats = [
+    [t.totalRides, `${totalRides}`, t.rides, 'text-slate-400', 'text-slate-800'],
+    [t.totalDistance, totalDistanceKm, 'km', 'text-slate-400', 'text-slate-800'],
+    [t.totalSavings, `£${estimatedSavings}`, '', 'text-sky-600', 'text-sky-700'],
+  ]
+  return <div className="grid grid-cols-3 gap-2 md:gap-4">{stats.map(([label, value, unit, labelClass, valueClass]) => <div key={label} className="rounded-2xl border border-slate-100 bg-white p-3.5 shadow-sm md:p-6"><p className={`text-xs font-medium md:text-sm ${labelClass}`}>{label}</p><p className={`mt-1 text-xl font-bold md:mt-2 md:text-3xl ${valueClass}`}>{value} {unit && <span className="text-xs font-normal text-slate-500 md:text-sm">{unit}</span>}</p></div>)}</div>
 }
