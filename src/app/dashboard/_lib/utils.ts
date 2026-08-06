@@ -1,8 +1,9 @@
 export type Ride = { id: string; name: string; distance: number; calories?: number | null; moving_time: number; start_date: string; is_commute: boolean; category?: string; is_manual_override?: boolean; start_station?: string; end_station?: string; summary_polyline: string }
 
-export function formatDateCN(dateStr: string) {
+export function formatDateCN(dateStr: string, lang: 'en' | 'zh' = 'zh') {
   const date = new Date(dateStr)
-  return Number.isNaN(date.getTime()) ? dateStr : `${date.getFullYear()}\u5e74${date.getMonth() + 1}\u6708${date.getDate()}\u65e5`
+  if (Number.isNaN(date.getTime())) return dateStr
+  return lang === 'zh' ? `${date.getFullYear()}\u5e74${date.getMonth() + 1}\u6708${date.getDate()}\u65e5` : date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 export function getWeekKey(dateStr: string) {

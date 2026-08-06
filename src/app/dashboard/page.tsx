@@ -284,6 +284,7 @@ export default function DashboardPage() {
   const roiData = calculateROI(rides, bikePriceInput, commuteCostInput, lang)
   const chartData = prepareChartData(rides, commuteCostInput)
   const totalCalories = Math.round(rides.reduce((total, ride) => total + (Number(ride.calories) || 0), 0))
+  const rideDetails = lang === 'zh' ? { title: '\u9a91\u884c\u8def\u7ebf\u8be6\u60c5', start: '\u8d77\u70b9\u7ad9', end: '\u7ec8\u70b9\u7ad9', unknown: '\u672a\u77e5' } : { title: 'Ride details', start: 'Start station', end: 'End station', unknown: 'Unknown' }
 
   return (
     <main className="min-h-screen bg-slate-50 px-2 py-4 md:p-8 relative">
@@ -364,10 +365,10 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-bold text-slate-800 text-lg truncate max-w-[280px]">
-                  {selectedRide.name || '骑行路线详情'}
+                  {selectedRide.name || rideDetails.title}
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  {formatDateCN(selectedRide.start_date)} · {(selectedRide.distance / 1000).toFixed(2)} km
+                  {formatDateCN(selectedRide.start_date, lang)} · {(selectedRide.distance / 1000).toFixed(2)} km
                 </p>
               </div>
               <button 
@@ -382,13 +383,13 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-center justify-between text-xs text-slate-600 bg-slate-50 p-3.5 rounded-xl border border-slate-100">
               <div>
-                <span className="text-slate-400 block text-[10px]">起点站</span>
-                <span className="font-semibold text-slate-700">{selectedRide.start_station || '未知'}</span>
+                <span className="text-slate-400 block text-[10px]">{rideDetails.start}</span>
+                <span className="font-semibold text-slate-700">{selectedRide.start_station || rideDetails.unknown}</span>
               </div>
               <span className="text-slate-400 font-bold">→</span>
               <div>
-                <span className="text-slate-400 block text-[10px]">终点站</span>
-                <span className="font-semibold text-slate-700">{selectedRide.end_station || '未知'}</span>
+                <span className="text-slate-400 block text-[10px]">{rideDetails.end}</span>
+                <span className="font-semibold text-slate-700">{selectedRide.end_station || rideDetails.unknown}</span>
               </div>
             </div>
           </div>

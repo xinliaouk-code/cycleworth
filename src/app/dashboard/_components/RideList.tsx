@@ -1,111 +1,15 @@
 'use client'
 
-import React from 'react'
 import { Ride, formatDateCN } from '../_lib/utils'
+import { useLanguage } from '../../../components/LanguageProvider'
 
-interface RideListProps {
-  rides: Ride[]
-  collapseRides: boolean
-  setCollapseRides: (val: boolean) => void
-  setSelectedRide: (ride: Ride) => void
-  handleSelectCategory: (ride: Ride, category: string) => void
-}
+interface RideListProps { rides: Ride[]; collapseRides: boolean; setCollapseRides: (value: boolean) => void; setSelectedRide: (ride: Ride) => void; handleSelectCategory: (ride: Ride, category: string) => void }
 
-export function RideList({
-  rides,
-  collapseRides,
-  setCollapseRides,
-  setSelectedRide,
-  handleSelectCategory
-}: RideListProps) {
-  return (
-    <div className="bg-white p-3.5 md:p-6 rounded-2xl shadow-sm border border-slate-100 space-y-3 transition-all">
-      <div className="flex items-center gap-2">
-        <button 
-          onClick={() => setCollapseRides(!collapseRides)}
-          className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold flex items-center justify-center text-xs transition cursor-pointer"
-          title={collapseRides ? "展开模块" : "收起模块"}
-        >
-          {collapseRides ? '+' : '−'}
-        </button>
-        <h2 className="text-base md:text-lg font-semibold text-slate-800">近期骑行明细</h2>
-      </div>
-      
-      {!collapseRides && (
-        <div>
-          {rides.length === 0 ? (
-            <p className="text-sm text-slate-400 py-4 text-center">暂无骑行记录，请先点击上方“同步记录”。</p>
-          ) : (
-            <div className="space-y-3 pt-1">
-              {rides.map((ride) => {
-                const currentCategory = ride.category || (ride.is_commute ? '日常交通' : '休闲骑行')
-                
-                return (
-                  <div 
-                    key={ride.id} 
-                    onClick={() => setSelectedRide(ride)}
-                    className="p-3.5 md:p-4 bg-white rounded-2xl border border-slate-100 shadow-xs hover:border-slate-200 hover:shadow-md transition-all cursor-pointer space-y-3"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="font-bold text-slate-800 text-base md:text-lg truncate max-w-[150px] sm:max-w-[220px]">
-                            {ride.name || '无标题骑行'}
-                          </p>
-                          {ride.is_manual_override && (
-                            <span
-                              className="px-1.5 py-0.5 rounded-md text-[9px] font-medium bg-amber-100 text-amber-700 border border-amber-200 whitespace-nowrap"
-                              title="This ride is locked after a manual category change. Sync and full recalculation will not overwrite it."
-                            >
-                              Locked
-                            </span>
-                          )}
-                          <select
-                            value={currentCategory}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(e) => handleSelectCategory(ride, e.target.value)}
-                            className={`px-2 py-0.5 rounded-lg text-[10px] md:text-xs font-medium shrink-0 cursor-pointer border focus:outline-none appearance-none transition ${
-                              currentCategory === '通勤骑行'
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                                : currentCategory === '日常交通'
-                                ? 'bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100'
-                                : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
-                            }`}
-                          >
-                            <option value="通勤骑行">💼 通勤骑行</option>
-                            <option value="日常交通">🚲 日常交通</option>
-                            <option value="休闲骑行">☕ 休闲骑行</option>
-                          </select>
-                        </div>
-                        <p className="text-xs md:text-sm text-slate-400 mt-1 font-normal">
-                          {formatDateCN(ride.start_date)} · {Math.round(ride.moving_time / 60)} 分钟
-                        </p>
-                      </div>
+const categories = { commute: '\u901a\u52e4\u9a91\u884c', transport: '\u65e5\u5e38\u4ea4\u901a', leisure: '\u4f11\u95f2\u9a91\u884c' }
 
-                      <div className="text-right shrink-0">
-                        <span className="font-bold text-slate-800 text-base md:text-lg">{(ride.distance / 1000).toFixed(1)}</span>
-                        <span className="text-xs text-slate-400 font-medium ml-0.5">km</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-xs bg-slate-50/80 p-2.5 rounded-xl border border-slate-100/80">
-                      <div className="flex-1 truncate">
-                        <span className="text-slate-400 block text-[9px] leading-tight mb-0.5">起点站</span>
-                        <span className="font-semibold text-slate-700 truncate block">{ride.start_station || '未知'}</span>
-                      </div>
-                      <span className="text-slate-300 font-bold px-1">→</span>
-                      <div className="flex-1 truncate">
-                        <span className="text-slate-400 block text-[9px] leading-tight mb-0.5">终点站</span>
-                        <span className="font-semibold text-slate-700 truncate block">{ride.end_station || '未知'}</span>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  )
+export function RideList(p: RideListProps) {
+  const { lang } = useLanguage()
+  const text = lang === 'zh' ? { title: '\u8fd1\u671f\u9a91\u884c\u660e\u7ec6', noRides: '\u6682\u65e0\u9a91\u884c\u8bb0\u5f55', start: '\u8d77\u70b9\u7ad9', end: '\u7ec8\u70b9\u7ad9', unknown: '\u672a\u77e5', minutes: '\u5206\u949f', expand: '\u5c55\u5f00\u6a21\u5757', collapse: '\u6536\u8d77\u6a21\u5757', locked: '\u5df2\u9501\u5b9a', commute: '\u901a\u52e4\u9a91\u884c', transport: '\u65e5\u5e38\u4ea4\u901a', leisure: '\u4f11\u95f2\u9a91\u884c' } : { title: 'Recent rides', noRides: 'No rides found. Sync data to fetch them.', start: 'Start station', end: 'End station', unknown: 'Unknown', minutes: 'min', expand: 'Expand section', collapse: 'Collapse section', locked: 'Locked', commute: 'Commute', transport: 'Everyday transport', leisure: 'Leisure Only' }
+  const labelFor = (category: string) => category === categories.commute ? text.commute : category === categories.transport ? text.transport : text.leisure
+  return <section className="space-y-3 rounded-2xl border border-slate-100 bg-white p-3.5 shadow-sm md:p-6"><div className="flex items-center gap-2"><button onClick={() => p.setCollapseRides(!p.collapseRides)} title={p.collapseRides ? text.expand : text.collapse} className="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-600">{p.collapseRides ? '+' : '-'}</button><h2 className="text-base font-semibold text-slate-800 md:text-lg">{text.title}</h2></div>{!p.collapseRides && (p.rides.length === 0 ? <p className="py-4 text-center text-sm text-slate-400">{text.noRides}</p> : <div className="space-y-3 pt-1">{p.rides.map(ride => { const category = ride.category || (ride.is_commute ? categories.transport : categories.leisure); return <article key={ride.id} onClick={() => p.setSelectedRide(ride)} className="space-y-3 rounded-2xl border border-slate-100 bg-white p-3.5 shadow-xs transition-all hover:border-slate-200 hover:shadow-md md:p-4"><div className="flex items-start justify-between gap-2"><div><div className="flex flex-wrap items-center gap-2"><p className="max-w-[150px] truncate text-base font-bold text-slate-800 sm:max-w-[220px] md:text-lg">{ride.name || 'Untitled ride'}</p>{ride.is_manual_override && <span title="This ride is locked after a manual category change. Sync and full recalculation will not overwrite it." className="whitespace-nowrap rounded-md border border-amber-200 bg-amber-100 px-1.5 py-0.5 text-[9px] font-medium text-amber-700">{text.locked}</span>}<select value={category} onClick={event => event.stopPropagation()} onChange={event => p.handleSelectCategory(ride, event.target.value)} className={`shrink-0 cursor-pointer rounded-lg border px-2 py-0.5 text-[10px] font-medium transition md:text-xs ${category === categories.commute ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : category === categories.transport ? 'border-sky-200 bg-sky-50 text-sky-700' : 'border-slate-200 bg-slate-100 text-slate-600'}`}><option value={categories.commute}>{text.commute}</option><option value={categories.transport}>{text.transport}</option><option value={categories.leisure}>{text.leisure}</option></select></div><p className="mt-1 text-xs font-normal text-slate-400 md:text-sm">{formatDateCN(ride.start_date, lang)} · {Math.round(ride.moving_time / 60)} {text.minutes}</p></div><div className="shrink-0 text-right"><span className="text-base font-bold text-slate-800 md:text-lg">{(ride.distance / 1000).toFixed(1)}</span><span className="ml-0.5 text-xs font-medium text-slate-400">km</span></div></div><div className="flex items-center gap-2 rounded-xl border border-slate-100/80 bg-slate-50/80 p-2.5 text-xs"><div className="flex-1 truncate"><span className="mb-0.5 block text-[9px] leading-tight text-slate-400">{text.start}</span><span className="block truncate font-semibold text-slate-700">{ride.start_station || text.unknown}</span></div><span className="px-1 font-bold text-slate-300">→</span><div className="flex-1 truncate"><span className="mb-0.5 block text-[9px] leading-tight text-slate-400">{text.end}</span><span className="block truncate font-semibold text-slate-700">{ride.end_station || text.unknown}</span></div></div></article> })}</div>)}</section>
 }
