@@ -284,7 +284,7 @@ export default function DashboardPage() {
   const roiData = calculateROI(rides, bikePriceInput, commuteCostInput, lang)
   const chartData = prepareChartData(rides, commuteCostInput)
   const totalCalories = Math.round(rides.reduce((total, ride) => total + (Number(ride.calories) || 0), 0))
-  const rideDetails = lang === 'zh' ? { title: '\u9a91\u884c\u8def\u7ebf\u8be6\u60c5', start: '\u8d77\u70b9\u7ad9', end: '\u7ec8\u70b9\u7ad9', unknown: '\u672a\u77e5' } : { title: 'Ride details', start: 'Start station', end: 'End station', unknown: 'Unknown' }
+  const rideDetails = lang === 'zh' ? { title: '\u9a91\u884c\u8def\u7ebf\u8be6\u60c5', start: '\u8d77\u70b9\u7ad9', end: '\u7ec8\u70b9\u7ad9', unknown: '\u672a\u77e5', minutes: '\u5206\u949f' } : { title: 'Ride details', start: 'Start station', end: 'End station', unknown: 'Unknown', minutes: 'min' }
 
   return (
     <main className="min-h-screen bg-slate-50 px-2 py-4 md:p-8 relative">
@@ -369,6 +369,9 @@ export default function DashboardPage() {
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
                   {formatDateCN(selectedRide.start_date, lang)} · {(selectedRide.distance / 1000).toFixed(2)} km
+                </p>
+                <p className="text-xs text-slate-500 mt-1">
+                  🕒 {Math.round(selectedRide.moving_time / 60)} {rideDetails.minutes} · 🔥 {Math.round(Number(selectedRide.calories) || 0).toLocaleString()} kcal
                 </p>
               </div>
               <button 
