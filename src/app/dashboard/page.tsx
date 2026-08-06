@@ -72,7 +72,7 @@ function loadCommuteCost() {
 }
 
 export default function DashboardPage() {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   const router = useRouter()
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null)
   const [isConnected, setIsConnected] = useState(false)
@@ -281,7 +281,7 @@ export default function DashboardPage() {
   const stravaAuthUrl = `https://www.strava.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&approval_prompt=auto&scope=read,activity:read_all`
 
   const totalDistanceKm = (rides.reduce((acc, r) => acc + (r.distance || 0), 0) / 1000).toFixed(1)
-  const roiData = calculateROI(rides, bikePriceInput, commuteCostInput)
+  const roiData = calculateROI(rides, bikePriceInput, commuteCostInput, lang)
   const chartData = prepareChartData(rides, commuteCostInput)
   const totalCalories = Math.round(rides.reduce((total, ride) => total + (Number(ride.calories) || 0), 0))
 

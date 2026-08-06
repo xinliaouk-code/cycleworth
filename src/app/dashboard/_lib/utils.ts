@@ -1,102 +1,48 @@
-export type Ride = {
-  id: string;
-  name: string;
-  distance: number;
-  calories?: number | null;
-  moving_time: number;
-  start_date: string;
-  is_commute: boolean;
-  category?: string;
-  is_manual_override?: boolean;
-  start_station?: string;
-  end_station?: string;
-  summary_polyline: string;
-}
+export type Ride = { id: string; name: string; distance: number; calories?: number | null; moving_time: number; start_date: string; is_commute: boolean; category?: string; is_manual_override?: boolean; start_station?: string; end_station?: string; summary_polyline: string }
 
 export function formatDateCN(dateStr: string) {
-  const d = new Date(dateStr)
-  if (isNaN(d.getTime())) return dateStr
-  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`
+  const date = new Date(dateStr)
+  return Number.isNaN(date.getTime()) ? dateStr : `${date.getFullYear()}\u5e74${date.getMonth() + 1}\u6708${date.getDate()}\u65e5`
 }
 
 export function getWeekKey(dateStr: string) {
-  const d = new Date(dateStr)
-  const day = d.getDay()
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1)
-  const monday = new Date(d.setDate(diff))
-  return monday.toISOString().substring(0, 10)
+  const date = new Date(dateStr)
+  const day = date.getDay()
+  date.setDate(date.getDate() - day + (day === 0 ? -6 : 1))
+  return date.toISOString().substring(0, 10)
 }
 
-export function calculateROI(rides: Ride[], bikePriceInput: string, commuteCostInput: string) {
-  const commuteRidesCount = rides.filter(r => r.is_commute).length
-  const commuteCost = Math.max(0, parseFloat(commuteCostInput) || 0)
-  const estimatedSavings = (commuteRidesCount * commuteCost).toFixed(2)
-  const savingsNum = Number(estimatedSavings)
-  const priceNum = parseFloat(bikePriceInput) || 0
+export function calculateROI(rides: Ride[], bikePriceInput: string, commuteCostInput: string, lang: 'en' | 'zh') {
+  const commuteCost = Math.max(0, Number.parseFloat(commuteCostInput) || 0)
+  const savingsNum = rides.filter(ride => ride.is_commute).length * commuteCost
+  const estimatedSavings = savingsNum.toFixed(2)
+  const priceNum = Number.parseFloat(bikePriceInput) || 0
   const roiPercentageNum = priceNum > 0 ? (savingsNum / priceNum) * 100 : 0
-  
   let paybackText = ''
   let isFullyPaidBack = false
 
   if (priceNum <= 0) {
-    paybackText = '请在右上角设置购车金额'
+    paybackText = lang === 'zh' ? '\u8bf7\u5148\u8bbe\u7f6e\u81ea\u884c\u8f66\u6210\u672c' : 'Set a bike cost to estimate payback.'
   } else if (savingsNum >= priceNum) {
     isFullyPaidBack = true
     const profit = (savingsNum - priceNum).toFixed(2)
-    paybackText = `已成功回本！🎉 (净收益 £${profit})`
+    paybackText = lang === 'zh' ? `\u5df2\u6210\u529f\u56de\u672c\uff01\u51c0\u8282\u7701 £${profit}` : `Paid back! Net savings: £${profit}`
+  } else if (commuteCost <= 0) {
+    paybackText = lang === 'zh' ? '\u8bf7\u8bbe\u7f6e\u9ed8\u8ba4\u4ea4\u901a\u6210\u672c' : 'Set a default transport cost to estimate payback.'
   } else {
-    const remainingAmount = priceNum - savingsNum
-    const remainingRides = commuteCost > 0 ? Math.ceil(remainingAmount / commuteCost) : 0
-    
-    const eligibleDates = rides
-      .filter(r => r.is_commute && r.start_date)
-      .map(r => new Date(r.start_date).getTime())
-      .filter(t => !isNaN(t))
-
-    let ridesPerDay = 0.57
-    if (eligibleDates.length > 0) {
-      const earliestTime = Math.min(...eligibleDates)
-      const nowTime = Date.now()
-      const diffDays = Math.max(7, (nowTime - earliestTime) / (1000 * 60 * 60 * 24))
-      ridesPerDay = eligibleDates.length / diffDays
-    }
-
-    const daysNeeded = Math.ceil(remainingRides / (ridesPerDay || 0.57))
-    const targetDate = new Date(Date.now() + daysNeeded * 24 * 60 * 60 * 1000)
-    const targetYear = targetDate.getFullYear()
-    const targetMonth = targetDate.getMonth() + 1
-
-    paybackText = `预计 ${targetYear}年${targetMonth}月 (约 ${remainingRides} 次骑行)`
+    const remainingRides = Math.ceil((priceNum - savingsNum) / commuteCost)
+    const eligibleDates = rides.filter(ride => ride.is_commute && ride.start_date).map(ride => new Date(ride.start_date).getTime()).filter(Number.isFinite)
+    const earliest = eligibleDates.length ? Math.min(...eligibleDates) : Date.now() - 7 * 86400000
+    const ridesPerDay = eligibleDates.length / Math.max(7, (Date.now() - earliest) / 86400000) || 0.57
+    const target = new Date(Date.now() + Math.ceil(remainingRides / ridesPerDay) * 86400000)
+    paybackText = lang === 'zh' ? `\u9884\u8ba1 ${target.getFullYear()}\u5e74${target.getMonth() + 1}\u6708 (\u7ea6 ${remainingRides} \u6b21\u9a91\u884c)` : `Estimated ${target.toLocaleString('en-GB', { month: 'short', year: 'numeric' })} (about ${remainingRides} rides)`
   }
-
-  return {
-    estimatedSavings,
-    roiPercentageNum,
-    roiPercentageStr: roiPercentageNum.toFixed(1),
-    paybackText,
-    isFullyPaidBack
-  }
+  return { estimatedSavings, roiPercentageNum, roiPercentageStr: roiPercentageNum.toFixed(1), paybackText, isFullyPaidBack }
 }
 
 export function prepareChartData(rides: Ride[], commuteCostInput: string) {
-  const commuteCost = Math.max(0, parseFloat(commuteCostInput) || 0)
-  const weeklyMap = new Map<string, { distance: number; savings: number; count: number }>()
-  rides.forEach(r => {
-    if (!r.start_date) return
-    const weekKey = getWeekKey(r.start_date)
-    const curr = weeklyMap.get(weekKey) || { distance: 0, savings: 0, count: 0 }
-    curr.distance += (r.distance || 0) / 1000
-    if (r.is_commute) curr.savings += commuteCost
-    curr.count += 1
-    weeklyMap.set(weekKey, curr)
-  })
-
-  return Array.from(weeklyMap.entries())
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([week, val]) => ({
-      shortWeek: week,
-      distance: Number(val.distance.toFixed(1)),
-      savings: Number(val.savings.toFixed(2)),
-      count: val.count
-    }))
+  const commuteCost = Math.max(0, Number.parseFloat(commuteCostInput) || 0)
+  const weeks = new Map<string, { distance: number; savings: number }>()
+  rides.forEach(ride => { if (!ride.start_date) return; const key = getWeekKey(ride.start_date); const value = weeks.get(key) || { distance: 0, savings: 0 }; value.distance += (ride.distance || 0) / 1000; if (ride.is_commute) value.savings += commuteCost; weeks.set(key, value) })
+  return [...weeks.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([shortWeek, value]) => ({ shortWeek, distance: Number(value.distance.toFixed(1)), savings: Number(value.savings.toFixed(2)) }))
 }
