@@ -13,6 +13,7 @@ import { SettingsPanel } from './_components/SettingsPanel'
 import { SyncStatus } from './_components/SyncStatus'
 import { WeeklyChart } from './_components/WeeklyChart'
 import { RideList } from './_components/RideList'
+import { MaintenanceCard } from './_components/MaintenanceCard'
 
 // Utils & Types
 import { Ride, formatDateCN, calculateROI, prepareChartData } from './_lib/utils'
@@ -295,6 +296,7 @@ export default function DashboardPage() {
           estimatedSavings={roiData.estimatedSavings} 
           totalCalories={totalCalories}
         />
+        {user && <MaintenanceCard userId={user.id} odometerKm={Number(totalDistanceKm)} />}
 
         <BikeROICard 
           {...roiData}
