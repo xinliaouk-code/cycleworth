@@ -38,6 +38,12 @@ export function maintenanceStatusText(status: MaintenanceStatus, lang: Maintenan
   return labels[status][lang]
 }
 
+export function maintenanceProgressColor(ratio: number) {
+  if (ratio > 1.2) return '#dc2626'
+  const hue = Math.max(18, 120 - (Math.min(ratio, 1.2) / 1.2) * 102)
+  return `hsl(${hue} 78% 45%)`
+}
+
 export const defaultMaintenanceTasks = [
   ['tyre_pressure', '\u68c0\u67e5\u8f6e\u80ce\u6c14\u538b', null, 7],
   ['chain_clean', '\u6e05\u6d01\u5e76\u6da6\u6ed1\u94fe\u6761', 250, 30],

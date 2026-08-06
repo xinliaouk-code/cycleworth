@@ -282,12 +282,12 @@ export default function DashboardPage() {
   return (
     <main className="min-h-screen bg-slate-50 px-2 py-4 md:p-8 relative">
       <div className="max-w-4xl mx-auto space-y-4 md:space-y-6">
-        <div className="flex items-center justify-between px-1">
-          <div>
+        <div className="flex items-start justify-between gap-3 px-1 sm:items-center">
+          <div className="min-w-0">
             <h1 className="text-2xl font-bold text-slate-800 tracking-tight">CycleWorth</h1>
             <p className="text-sm text-slate-500 mt-0.5">{t.tagline}</p>
           </div>
-          <div className="flex items-center gap-3"><Link href="/settings" className="text-xs font-semibold text-slate-500 hover:text-sky-600">{lang === 'zh' ? '\u8bbe\u7f6e' : 'Settings'}</Link><LanguageSwitcher /><div className="text-right text-xs text-slate-400">{user?.email}</div></div>
+          <div className="flex shrink-0 items-center gap-2"><Link href="/settings" title={lang === 'zh' ? '\u8bbe\u7f6e' : 'Settings'} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-sm text-slate-500 sm:hidden">⚙</Link><Link href="/settings" className="hidden text-xs font-semibold text-slate-500 hover:text-sky-600 sm:inline">{lang === 'zh' ? '\u8bbe\u7f6e' : 'Settings'}</Link><LanguageSwitcher /><div className="hidden text-right text-xs text-slate-400 md:block">{user?.email}</div></div>
         </div>
 
         <StatsGrid 
@@ -353,8 +353,8 @@ export default function DashboardPage() {
       </div>
 
       {selectedRide && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/40 backdrop-blur-xs transition-all p-0 md:p-4">
-          <div className="bg-white w-full md:w-[480px] rounded-t-3xl md:rounded-2xl p-6 shadow-2xl border border-slate-100 space-y-4 animate-in fade-in slide-in-from-bottom duration-200">
+        <div onClick={() => setSelectedRide(null)} className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 backdrop-blur-xs transition-all md:items-center md:p-4">
+          <div onClick={event => event.stopPropagation()} className="w-full animate-in slide-in-from-bottom rounded-t-3xl border border-slate-100 bg-white p-6 shadow-2xl fade-in duration-200 md:w-[480px] md:rounded-2xl">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-bold text-slate-800 text-lg truncate max-w-[280px]">
