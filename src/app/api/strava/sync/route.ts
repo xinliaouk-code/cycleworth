@@ -117,13 +117,38 @@ const TUBE_STATIONS = [
   { name: "Old Street", lat: 51.5255, lng: -0.0879 }
 ]
 
+// 地球半径（公里）
+const EARTH_RADIUS_KM = 6371
+
+/**
+ * 计算两个经纬度点之间的球面距离（Haversine 公式），单位：公里。
+ * 相比平面欧氏距离，在伦敦所在的高纬度地区不会因经度压缩而失准。
+ */
+function haversineDistance(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number
+): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180
+  const dLat = toRad(lat2 - lat1)
+  const dLng = toRad(lng2 - lng1)
+
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2
+
+  return 2 * EARTH_RADIUS_KM * Math.asin(Math.sqrt(a))
+}
+
+/** 用 Haversine 球面距离取最近的站点（站点匹配更精准） */
 function getNearestStation(lat?: number, lng?: number): string {
-  if (!lat || !lng) return '未知起点'
+  if (lat == null || lng == null) return '未知起点'
   let nearest = TUBE_STATIONS[0]
   let minDistance = Infinity
 
   for (const station of TUBE_STATIONS) {
-    const dist = Math.pow(station.lat - lat, 2) + Math.pow(station.lng - lng, 2)
+    const dist = haversineDistance(lat, lng, station.lat, station.lng)
     if (dist < minDistance) {
       minDistance = dist
       nearest = station
@@ -168,7 +193,7 @@ function classifyRide(
 
   const isHomeStart = homeList.some(h => start.includes(h) || h.includes(start))
   const isOfficeEnd = officeList.some(o => end.includes(o) || o.includes(end))
-  
+
   const isOfficeStart = officeList.some(o => start.includes(o) || o.includes(start))
   const isHomeEnd = homeList.some(h => end.includes(h) || h.includes(end))
 
@@ -192,11 +217,19 @@ function classifyRide(
   return { isSavingsEligible: false, category: '休闲骑行' }
 }
 
+type RidesRow = {
+  id: string;
+  strava_activity_id: number | null;
+  name: string | null;
+  start_date: string | null;
+  is_manual_override: boolean;
+}
+
 export async function POST(request: Request) {
   try {
-    const { 
+    const {
       accessToken,
-      homeStation = 'Custom House, Royal Victoria', 
+      homeStation = 'Custom House, Royal Victoria',
       officeStation = 'Bank, Old Street',
       morningStart = 7,
       morningEnd = 10,
@@ -235,7 +268,7 @@ export async function POST(request: Request) {
 
     let currentAccessToken = conn.access_token
 
-    let testRes = await fetch(
+    const testRes = await fetch(
       'https://www.strava.com/api/v3/athlete/activities?per_page=1',
       { headers: { Authorization: `Bearer ${currentAccessToken}` } }
     )
@@ -266,27 +299,50 @@ export async function POST(request: Request) {
       }
     }
 
-    let page = 1
-    const perPage = 100 
-    let allActivities: any[] = []
+    // ── 改动 5：增量同步 ──
+    // 先取该用户已同步的最新活动时间作为基线，只拉取其后的新增 Strava 活动。
+    const { data: latestRow } = await supabase
+      .from('rides')
+      .select('start_date')
+      .eq('user_id', userId)
+      .order('start_date', { ascending: false })
+      .limit(1)
+      .maybeSingle()
 
-    while (true) {
-      const stravaRes = await fetch(
-        `https://www.strava.com/api/v3/athlete/activities?page=${page}&per_page=${perPage}`,
-        { headers: { Authorization: `Bearer ${currentAccessToken}` } }
-      )
+    const lastSyncedAt = latestRow?.start_date
+      ? new Date(latestRow.start_date).getTime() / 1000
+      : undefined
+
+    let page = 1
+    const perPage = 100
+    const allActivities: any[] = []
+    let reachedBaseline = false
+
+    while (!reachedBaseline) {
+      let url = `https://www.strava.com/api/v3/athlete/activities?page=${page}&per_page=${perPage}`
+      // Strava 支持 after（epoch 秒）。有基线时用它只拉增量，大幅减少翻页与 API 配额。
+      if (lastSyncedAt) url += `&after=${Math.floor(lastSyncedAt)}`
+
+      const stravaRes = await fetch(url, {
+        headers: { Authorization: `Bearer ${currentAccessToken}` }
+      })
 
       if (!stravaRes.ok) break
       const activities = await stravaRes.json()
       if (!Array.isArray(activities) || activities.length === 0) break
 
-      allActivities = allActivities.concat(activities)
-      if (activities.length < perPage) break
+      allActivities.push(...activities)
+      if (activities.length < perPage || !lastSyncedAt) break
+
+      // 兜底：即使未用 after，也尽早停在与基线重叠的旧活动上，避免拉全量。
+      reachedBaseline = activities.some(
+        (a: any) => a.start_date && new Date(a.start_date).getTime() / 1000 <= lastSyncedAt
+      )
       page++
     }
 
     if (allActivities.length === 0) {
-      return NextResponse.json({ success: true, count: 0, message: '没有获取到任何 Strava 活动' })
+      return NextResponse.json({ success: true, count: 0, message: '没有需要同步的新活动' })
     }
 
     // 查询已有记录（包含 is_manual_override）
@@ -295,8 +351,8 @@ export async function POST(request: Request) {
       .select('id, strava_activity_id, name, start_date, is_manual_override')
       .eq('user_id', userId)
 
-    const existingByActivityId = new Map<number, any>()
-    const existingByKey = new Map<string, any>()
+    const existingByActivityId = new Map<number, RidesRow>()
+    const existingByKey = new Map<string, RidesRow>()
 
     if (existingRides) {
       existingRides.forEach((r: any) => {
@@ -305,7 +361,9 @@ export async function POST(request: Request) {
       })
     }
 
-    let syncedCount = 0
+    // ── 改动 4：批量写入（收集后一次 upsert / 一次 insert） ──
+    const rowsToUpdate: any[] = []
+    const rowsToInsert: any[] = []
 
     for (const act of allActivities) {
       if (act.type !== 'Ride' && act.type !== 'EBikeRide') continue
@@ -324,52 +382,52 @@ export async function POST(request: Request) {
 
       const { isSavingsEligible, category } = classifyRide(act.start_date, startStation, endStation, settings)
 
-      if (matchedRecord) {
-        const updateData: any = {
-          name: act.name,
-          distance: act.distance,
-          moving_time: act.moving_time,
-          elapsed_time: act.elapsed_time,
-          type: act.type,
-          start_date: act.start_date,
-          start_station: startStation,
-          end_station: endStation,
-          summary_polyline: summaryPolyline,
-          strava_activity_id: act.id
-        }
+      const baseFields = {
+        name: act.name,
+        distance: act.distance,
+        moving_time: act.moving_time,
+        elapsed_time: act.elapsed_time,
+        type: act.type,
+        start_date: act.start_date,
+        start_station: startStation,
+        end_station: endStation,
+        summary_polyline: summaryPolyline,
+        strava_activity_id: act.id
+      }
 
-        // 🛡️ 核心修复：如果用户未曾手动覆盖，才使用算法判定的分类；否则严格保留用户手改结果
+      if (matchedRecord) {
+        // 🛡️ 保留手动覆盖：用户曾手改的，不重写分类
+        const updateData: any = { ...baseFields }
         if (!matchedRecord.is_manual_override) {
           updateData.is_commute = isSavingsEligible
           updateData.category = category
         }
-
-        await supabase
-          .from('rides')
-          .update(updateData)
-          .eq('id', matchedRecord.id)
+        updateData.id = matchedRecord.id
+        rowsToUpdate.push(updateData)
       } else {
-        await supabase
-          .from('rides')
-          .insert({
-            user_id: userId,
-            strava_activity_id: act.id,
-            name: act.name,
-            distance: act.distance,
-            moving_time: act.moving_time,
-            elapsed_time: act.elapsed_time,
-            type: act.type,
-            start_date: act.start_date,
-            is_commute: isSavingsEligible,
-            category: category,
-            is_manual_override: false,
-            start_station: startStation,
-            end_station: endStation,
-            summary_polyline: summaryPolyline
-          })
+        rowsToInsert.push({
+          ...baseFields,
+          user_id: userId,
+          is_commute: isSavingsEligible,
+          category,
+          is_manual_override: false
+        })
       }
-      syncedCount++
     }
+
+    // 批量 upsert：一次请求更新所有已存在的骑行
+    if (rowsToUpdate.length > 0) {
+      const { error } = await supabase.from('rides').upsert(rowsToUpdate)
+      if (error) throw error
+    }
+
+    // 批量 insert：一次请求插入所有新增骑行
+    if (rowsToInsert.length > 0) {
+      const { error } = await supabase.from('rides').insert(rowsToInsert)
+      if (error) throw error
+    }
+
+    const syncedCount = rowsToUpdate.length + rowsToInsert.length
 
     return NextResponse.json({ success: true, count: syncedCount })
   } catch (err: any) {
