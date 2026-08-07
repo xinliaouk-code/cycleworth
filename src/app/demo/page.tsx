@@ -18,7 +18,7 @@ import { demoMaintenanceTasks, demoRideAdvice, demoRides } from './mock-data'
 
 export default function DemoPage() {
   const { lang, t } = useLanguage()
-  const [bikePrice, setBikePrice] = useState('500')
+  const [bikePrice, setBikePrice] = useState('799')
   const [collapseSettings, setCollapseSettings] = useState(true)
   const [collapseRoi, setCollapseRoi] = useState(false)
   const [collapseSync, setCollapseSync] = useState(false)

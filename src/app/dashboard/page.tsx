@@ -60,11 +60,11 @@ function loadCommuteSettings() {
 }
 
 function loadBikePrice() {
-  if (typeof window === 'undefined') return '500'
+  if (typeof window === 'undefined') return '799'
   try {
-    return localStorage.getItem('cw_bike_price') ?? '500'
+    return localStorage.getItem('cw_bike_price') ?? '799'
   } catch {
-    return '500'
+    return '799'
   }
 }
 
