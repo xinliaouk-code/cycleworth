@@ -14,7 +14,7 @@ export function proxy(request: NextRequest) {
     return NextResponse.json({ error: 'API access is disabled in Demo Mode.' }, { status: 403 })
   }
 
-  if (pathname !== '/demo' && !pathname.startsWith('/demo/')) {
+  if (!['/demo', '/settings', '/maintenance'].includes(pathname) && !pathname.startsWith('/demo/')) {
     return NextResponse.redirect(new URL('/demo', request.url))
   }
 

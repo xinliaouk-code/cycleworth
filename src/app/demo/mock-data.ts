@@ -1,9 +1,62 @@
 import type { MaintenanceTask } from '../../lib/maintenance'
 import type { Ride } from '../dashboard/_lib/utils'
 
+type Point = [number, number]
+
+// Static London route templates, encoded using the same Google polyline format
+// consumed by the production RideMap component. The points are intentionally
+// approximate and never fetched from an external routing service.
+function encodePolyline(points: Point[]) {
+  let previousLat = 0
+  let previousLng = 0
+  return points.map(([lat, lng]) => {
+    const encode = (value: number) => {
+      let current = value < 0 ? ~(value << 1) : value << 1
+      let output = ''
+      while (current >= 0x20) { output += String.fromCharCode((0x20 | (current & 0x1f)) + 63); current >>= 5 }
+      return output + String.fromCharCode(current + 63)
+    }
+    const nextLat = Math.round(lat * 1e5)
+    const nextLng = Math.round(lng * 1e5)
+    const encoded = encode(nextLat - previousLat) + encode(nextLng - previousLng)
+    previousLat = nextLat
+    previousLng = nextLng
+    return encoded
+  }).join('')
+}
+
+const routeTemplates = {
+  a: encodePolyline([[51.5054, -0.0202], [51.5105, -0.029], [51.5131, -0.0396], [51.507, -0.0559], [51.5098, -0.0766], [51.5134, -0.089]]),
+  b: encodePolyline([[51.5134, -0.089], [51.5113, -0.076], [51.509, -0.058], [51.505, -0.041], [51.5054, -0.0202]]),
+  c: encodePolyline([[51.5054, -0.0202], [51.5005, -0.031], [51.5035, -0.048], [51.505, -0.056], [51.507, -0.069], [51.5134, -0.089]]),
+  d: encodePolyline([[51.5134, -0.089], [51.5146, -0.0973], [51.5115, -0.1031], [51.507, -0.082], [51.5045, -0.0559], [51.5054, -0.0202]]),
+  e: encodePolyline([[51.5054, -0.0202], [51.503, -0.043], [51.5055, -0.0865], [51.5055, -0.0865], [51.5012, -0.0934], [51.508, -0.075], [51.5054, -0.0202]]),
+  f: encodePolyline([[51.5134, -0.089], [51.5098, -0.0766], [51.5055, -0.075], [51.5025, -0.06], [51.5054, -0.0202]]),
+  g: encodePolyline([[51.5054, -0.0202], [51.5106, -0.041], [51.5154, -0.0726], [51.5178, -0.0823]]),
+  urbanCity: encodePolyline([[51.5054, -0.0202], [51.5045, -0.0559], [51.5098, -0.0766], [51.5134, -0.089], [51.5146, -0.0973], [51.5055, -0.0865], [51.5054, -0.0202]]),
+  urbanBorough: encodePolyline([[51.5054, -0.0202], [51.503, -0.045], [51.5055, -0.0865], [51.5012, -0.0934], [51.497, -0.09], [51.5025, -0.06], [51.5054, -0.0202]]),
+  urbanEast: encodePolyline([[51.5054, -0.0202], [51.510, -0.035], [51.516, -0.055], [51.5235, -0.078], [51.5178, -0.0823], [51.5098, -0.0766], [51.5054, -0.0202]]),
+  leisureGreenwich: encodePolyline([[51.5054, -0.0202], [51.4957, -0.014], [51.4871, -0.012], [51.482, -0.0108], [51.4779, -0.0132], [51.49, -0.02], [51.5054, -0.0202]]),
+  leisureCanal: encodePolyline([[51.5054, -0.0202], [51.525, -0.025], [51.543, -0.025], [51.548, -0.055], [51.535, -0.075], [51.525, -0.07], [51.5054, -0.0202]]),
+  leisureCentral: encodePolyline([[51.5054, -0.0202], [51.5055, -0.0865], [51.5115, -0.1031], [51.515, -0.12], [51.505, -0.14], [51.495, -0.12], [51.5012, -0.0934], [51.5054, -0.0202]]),
+}
+
+const routeForRide: Record<string, keyof typeof routeTemplates> = {
+  'demo-ride-036': 'a', 'demo-ride-035': 'f', 'demo-ride-034': 'g', 'demo-ride-033': 'leisureGreenwich', 'demo-ride-032': 'urbanCity', 'demo-ride-031': 'b', 'demo-ride-030': 'c', 'demo-ride-029': 'leisureCanal', 'demo-ride-028': 'e', 'demo-ride-027': 'a', 'demo-ride-026': 'urbanEast', 'demo-ride-025': 'b', 'demo-ride-024': 'urbanCity', 'demo-ride-023': 'f', 'demo-ride-022': 'c', 'demo-ride-021': 'leisureGreenwich', 'demo-ride-020': 'urbanBorough', 'demo-ride-019': 'f', 'demo-ride-018': 'a', 'demo-ride-017': 'd', 'demo-ride-016': 'c', 'demo-ride-015': 'urbanCity', 'demo-ride-014': 'b', 'demo-ride-013': 'g', 'demo-ride-012': 'leisureCanal', 'demo-ride-011': 'f', 'demo-ride-010': 'a', 'demo-ride-009': 'urbanCity', 'demo-ride-008': 'b', 'demo-ride-007': 'c', 'demo-ride-006': 'd', 'demo-ride-005': 'a', 'demo-ride-004': 'urbanEast', 'demo-ride-003': 'leisureCentral', 'demo-ride-002': 'b', 'demo-ride-001': 'a',
+}
+
+export const demoSettings = {
+  bicycle: 'Brompton C Line 12-speed',
+  bikePrice: '1650',
+  avoidedTransportCost: 3.6,
+  homeStation: 'Canary Wharf',
+  officeStation: 'Bank, Liverpool Street',
+  morningStart: '7', morningEnd: '10', eveningStart: '16', eveningEnd: '20',
+} as const
+
 // Fixed, hand-authored activity history for the standalone demo. Dates, route
 // names and metrics deliberately model one Canary Wharf / City cyclist.
-export const demoRides: Ride[] = [
+const demoRideRows: Ride[] = [
   { id: 'demo-ride-036', name: 'Canary Wharf to Bank, via Limehouse', distance: 6300, moving_time: 1540, calories: 238, start_date: '2026-08-06T07:48:00.000Z', is_commute: true, category: '通勤骑行', start_station: 'Canary Wharf', end_station: 'Bank', summary_polyline: '' },
   { id: 'demo-ride-035', name: 'Bank to Canary Wharf, Tower Bridge return', distance: 8100, moving_time: 2080, calories: 306, start_date: '2026-08-05T17:42:00.000Z', is_commute: true, category: '通勤骑行', start_station: 'Bank', end_station: 'Canary Wharf', summary_polyline: '' },
   { id: 'demo-ride-034', name: 'Canary Wharf to Liverpool Street', distance: 7200, moving_time: 1780, calories: 271, start_date: '2026-08-04T08:06:00.000Z', is_commute: true, category: '通勤骑行', start_station: 'Canary Wharf', end_station: 'Liverpool Street', summary_polyline: '' },
@@ -41,6 +94,8 @@ export const demoRides: Ride[] = [
   { id: 'demo-ride-002', name: 'Bank to Canary Wharf, after-work return', distance: 7200, moving_time: 1850, calories: 274, start_date: '2026-03-26T17:49:00.000Z', is_commute: true, category: '通勤骑行', start_station: 'Bank', end_station: 'Canary Wharf', summary_polyline: '' },
   { id: 'demo-ride-001', name: 'Canary Wharf to Bank, first spring commute', distance: 6900, moving_time: 1750, calories: 262, start_date: '2026-03-24T07:54:00.000Z', is_commute: true, category: '通勤骑行', start_station: 'Canary Wharf', end_station: 'Bank', summary_polyline: '' },
 ]
+
+export const demoRides: Ride[] = demoRideRows.map(ride => ({ ...ride, summary_polyline: routeTemplates[routeForRide[ride.id]] }))
 
 export const demoMaintenanceHistory = [
   { id: 'demo-maintenance-4', task_type: 'tyre_pressure', completed_at: '2026-08-02T09:20:00.000Z', odometer_km: 365.4, cost: null, notes: 'Checked both tyres before the Thames Path ride.' },
