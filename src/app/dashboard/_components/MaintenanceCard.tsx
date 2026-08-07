@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useLanguage } from '../../../components/LanguageProvider'
-import { supabase } from '../../../lib/supabase'
 import { defaultMaintenanceTasks, maintenanceName, maintenanceProgress, maintenanceProgressColor, maintenanceStatusText, type MaintenanceTask } from '../../../lib/maintenance'
 
 type Props = { userId?: string; odometerKm: number; demoTasks?: MaintenanceTask[]; onDemoCta?: () => void }
@@ -19,6 +18,7 @@ export function MaintenanceCard({ userId, odometerKm, demoTasks, onDemoCta }: Pr
   const load = async () => {
     if (demoTasks) { setTasks(demoTasks); return }
     if (!userId) return
+    const { supabase } = await import('../../../lib/supabase')
     await supabase.from('bike_maintenance_tasks').upsert(defaultMaintenanceTasks.map(([task_type, display_name, distance_interval_km, time_interval_days]) => ({ user_id: userId, task_type, display_name, distance_interval_km, time_interval_days, last_completed_odometer_km: odometerKm })), { onConflict: 'user_id,task_type', ignoreDuplicates: true })
     const { data } = await supabase.from('bike_maintenance_tasks').select('*').eq('user_id', userId).eq('active', true)
     setTasks((data ?? []) as MaintenanceTask[])
@@ -30,6 +30,7 @@ export function MaintenanceCard({ userId, odometerKm, demoTasks, onDemoCta }: Pr
   const complete = async () => {
     if (isDemo) { onDemoCta?.(); return }
     if (!userId) return
+    const { supabase } = await import('../../../lib/supabase')
     const cost = window.prompt(text.cost)
     const notes = window.prompt(text.notes)
     setBusy(true)
