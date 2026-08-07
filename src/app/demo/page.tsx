@@ -41,7 +41,7 @@ export default function DemoPage() {
     <div className="flex flex-col gap-3 rounded-2xl border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900 sm:flex-row sm:items-center sm:justify-between"><div><b>Demo Mode</b><span className="ml-2 text-sky-700">Sample cycling data only — no account, database writes, or Strava requests.</span></div><Link href="/login" className="shrink-0 rounded-xl bg-sky-600 px-3 py-2 text-center text-xs font-semibold text-white">Create account</Link></div>
     <header className="flex items-start justify-between gap-3 px-1 sm:items-center"><div className="min-w-0"><h1 className="text-2xl font-bold tracking-tight text-slate-800">CycleWorth</h1><p className="mt-0.5 text-sm text-slate-500">{t.tagline}</p></div><div className="flex shrink-0 items-center gap-2"><Link href="/login" className="hidden text-xs font-semibold text-slate-500 hover:text-sky-600 sm:inline">Sign in</Link><LanguageSwitcher /></div></header>
     {cta && <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-violet-100 bg-violet-50 p-3 text-sm text-violet-800"><span>Demo data is read-only. Create an account to save changes or sync Strava.</span><Link href="/login" className="rounded-xl bg-violet-600 px-3 py-2 text-xs font-semibold text-white">Create account</Link></div>}
-    <RideAdviceCard initialData={demoRideAdvice} />
+    <RideAdviceCard initialData={demoRideAdvice} demo />
     <StatsGrid totalRides={demoRides.length} totalDistanceKm={totalDistanceKm} estimatedSavings={roi.estimatedSavings} totalCalories={totalCalories} />
     <MaintenanceCard odometerKm={Number(totalDistanceKm)} demoTasks={demoMaintenanceTasks} onDemoCta={showCta} />
     <RideHeatmap rides={demoRides} />

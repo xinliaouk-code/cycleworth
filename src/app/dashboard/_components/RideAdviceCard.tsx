@@ -7,7 +7,7 @@ import { dashboardCardClass, dashboardCardTitleClass, dashboardCollapseButtonCla
 type Advice = { temperature: number; windSpeed: number; windDirection: number; raining: boolean; rainProbability: number; sunset: string; aqi: number }
 const direction = (degree: number) => ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(degree / 45) % 8]
 
-export function RideAdviceCard({ initialData }: { initialData?: Advice } = {}) {
+export function RideAdviceCard({ initialData, demo = false }: { initialData?: Advice; demo?: boolean } = {}) {
   const { lang, t } = useLanguage()
   const ui = moduleText(lang)
   const [data, setData] = useState<Advice | null>(initialData ?? null)
@@ -15,14 +15,15 @@ export function RideAdviceCard({ initialData }: { initialData?: Advice } = {}) {
   const [failed, setFailed] = useState(false)
   const [loading, setLoading] = useState(!initialData)
   const load = useCallback(async () => {
+    if (demo) return
     setLoading(true); setFailed(false)
     try {
       const response = await fetch('/api/ride-advice')
       if (!response.ok) throw new Error('Weather request failed')
       setData(await response.json())
     } catch { setData(null); setFailed(true) } finally { setLoading(false) }
-  }, [])
-  useEffect(() => { if (!initialData) void load() }, [initialData, load])
+  }, [demo])
+  useEffect(() => { if (!initialData && !demo) void load() }, [demo, initialData, load])
 
   if (!data && loading) return <section className={`${dashboardCardClass} animate-pulse`}><div className="h-5 w-36 rounded bg-slate-100" /><div className="mt-3 h-4 w-2/3 rounded bg-slate-100" /></section>
   if (!data && failed) return <section className={`${dashboardCardClass} border-amber-100 bg-amber-50`}><p className="text-sm font-medium text-amber-800">{ui.weatherUnavailable}</p><button onClick={() => void load()} className="mt-2 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-amber-700 shadow-sm transition hover:bg-amber-100">{ui.retry}</button></section>
