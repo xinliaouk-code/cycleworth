@@ -50,7 +50,7 @@ const routeForRide: Record<string, keyof typeof routeTemplates> = {
 
 export const demoSettings = {
   bicycle: 'Brompton C Line 12-speed',
-  bikePrice: '1650',
+  bikePrice: '799',
   avoidedTransportCost: 3.6,
   homeStation: 'Canary Wharf',
   officeStation: 'Bank, Liverpool Street',
@@ -98,19 +98,23 @@ const demoRideRows: Ride[] = [
   { id: 'demo-ride-001', name: 'Canary Wharf to Bank, first spring commute', distance: 6900, moving_time: 1750, calories: 262, start_date: '2026-03-24T07:54:00.000Z', is_commute: true, category: '通勤骑行', start_station: 'Canary Wharf', end_station: 'Bank', summary_polyline: '' },
 ]
 
-export const demoRides: Ride[] = demoRideRows.map(ride => ({ ...ride, summary_polyline: routeTemplates[routeForRide[ride.id]] }))
+const demoDates: Record<string, string> = {
+  'demo-ride-036': '2026-08-06T07:48:00.000Z', 'demo-ride-035': '2026-08-05T17:42:00.000Z', 'demo-ride-034': '2026-08-04T08:06:00.000Z', 'demo-ride-033': '2026-08-02T10:18:00.000Z', 'demo-ride-032': '2026-07-30T18:24:00.000Z', 'demo-ride-031': '2026-07-28T17:55:00.000Z', 'demo-ride-030': '2026-07-27T07:39:00.000Z', 'demo-ride-029': '2026-07-25T10:04:00.000Z', 'demo-ride-028': '2026-07-22T18:13:00.000Z', 'demo-ride-027': '2026-07-21T07:52:00.000Z', 'demo-ride-026': '2026-07-16T19:02:00.000Z', 'demo-ride-025': '2026-07-15T17:38:00.000Z', 'demo-ride-024': '2026-07-14T07:21:00.000Z', 'demo-ride-023': '2026-07-09T17:46:00.000Z', 'demo-ride-022': '2026-07-08T07:58:00.000Z', 'demo-ride-021': '2026-07-05T10:42:00.000Z', 'demo-ride-020': '2026-07-02T18:31:00.000Z', 'demo-ride-019': '2026-06-30T17:51:00.000Z', 'demo-ride-018': '2026-06-29T07:32:00.000Z', 'demo-ride-017': '2026-06-25T18:07:00.000Z', 'demo-ride-016': '2026-06-24T07:44:00.000Z', 'demo-ride-015': '2026-06-23T18:45:00.000Z', 'demo-ride-014': '2026-06-19T17:59:00.000Z', 'demo-ride-013': '2026-06-18T07:36:00.000Z', 'demo-ride-012': '2026-06-14T10:26:00.000Z', 'demo-ride-011': '2026-06-11T18:18:00.000Z', 'demo-ride-010': '2026-06-10T07:49:00.000Z', 'demo-ride-009': '2026-06-09T18:36:00.000Z', 'demo-ride-008': '2026-06-08T17:41:00.000Z', 'demo-ride-007': '2026-06-04T07:57:00.000Z', 'demo-ride-006': '2026-06-03T18:02:00.000Z', 'demo-ride-005': '2026-06-02T07:43:00.000Z', 'demo-ride-004': '2026-06-01T18:52:00.000Z', 'demo-ride-003': '2026-06-01T10:13:00.000Z', 'demo-ride-002': '2026-06-01T08:49:00.000Z', 'demo-ride-001': '2026-06-01T07:54:00.000Z',
+}
+
+export const demoRides: Ride[] = demoRideRows.map(ride => ({ ...ride, start_date: demoDates[ride.id], summary_polyline: routeTemplates[routeForRide[ride.id]] }))
 
 export const demoMaintenanceHistory = [
   { id: 'demo-maintenance-4', task_type: 'tyre_pressure', completed_at: '2026-08-02T09:20:00.000Z', odometer_km: 365.4, cost: null, notes: 'Checked both tyres before the Thames Path ride.' },
   { id: 'demo-maintenance-3', task_type: 'chain_clean', completed_at: '2026-07-08T19:10:00.000Z', odometer_km: 276.2, cost: 11.5, notes: 'Degreased and lubricated drivetrain after wet commutes.' },
-  { id: 'demo-maintenance-2', task_type: 'brake_pads', completed_at: '2026-05-22T18:30:00.000Z', odometer_km: 150.6, cost: null, notes: 'Brake inspection; pads still have good wear remaining.' },
-  { id: 'demo-maintenance-1', task_type: 'chain_wear', completed_at: '2026-04-12T11:15:00.000Z', odometer_km: 59.8, cost: null, notes: 'Drivetrain inspection and chain wear check.' },
+  { id: 'demo-maintenance-2', task_type: 'brake_pads', completed_at: '2026-06-10T18:30:00.000Z', odometer_km: 150.6, cost: null, notes: 'Brake inspection; pads still have good wear remaining.' },
+  { id: 'demo-maintenance-1', task_type: 'chain_wear', completed_at: '2026-06-01T11:15:00.000Z', odometer_km: 59.8, cost: null, notes: 'Drivetrain inspection and chain wear check.' },
 ]
 
 export const demoMaintenanceTasks: MaintenanceTask[] = [
   { id: 'demo-chain', task_type: 'chain_clean', display_name: 'Clean and lubricate chain', distance_interval_km: 250, time_interval_days: 30, last_completed_at: '2026-07-08T19:10:00.000Z', last_completed_odometer_km: 276.2, estimated_cost: 11.5, notes: 'Due soon after a month of City commuting.', active: true },
   { id: 'demo-tyres', task_type: 'tyre_pressure', display_name: 'Check tyre pressure', distance_interval_km: null, time_interval_days: 7, last_completed_at: '2026-08-02T09:20:00.000Z', last_completed_odometer_km: 365.4, estimated_cost: null, notes: null, active: true },
-  { id: 'demo-brakes', task_type: 'brake_pads', display_name: 'Inspect brake pads', distance_interval_km: 750, time_interval_days: 90, last_completed_at: '2026-05-22T18:30:00.000Z', last_completed_odometer_km: 150.6, estimated_cost: null, notes: 'Checked after spring riding.', active: true },
+  { id: 'demo-brakes', task_type: 'brake_pads', display_name: 'Inspect brake pads', distance_interval_km: 750, time_interval_days: 90, last_completed_at: '2026-06-10T18:30:00.000Z', last_completed_odometer_km: 150.6, estimated_cost: null, notes: 'Checked after spring riding.', active: true },
 ]
 
 export const demoRideAdvice = { temperature: 18, windSpeed: 12, windDirection: 225, raining: false, rainProbability: 10, sunset: '2026-08-06T19:33:00.000Z', aqi: 18 }
