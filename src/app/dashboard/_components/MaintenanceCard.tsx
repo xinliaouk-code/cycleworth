@@ -65,7 +65,7 @@ export function MaintenanceCard({ odometerKm, demoTasks, onDemoCta }: Props) {
 
       {!collapsed && <>
         <p className="mt-3 text-sm text-slate-500">
-          {text.progress} {Math.round(progress.ratio * 100)}% \u00b7 {progress.kmRemaining !== null && `${progress.kmRemaining.toFixed(0)} km ${text.remaining}`}
+          {text.progress} {Math.round(progress.ratio * 100)}% {'\u00b7'} {progress.kmRemaining !== null && `${progress.kmRemaining.toFixed(0)} km ${text.remaining}`}
           {progress.kmRemaining !== null && progress.daysRemaining !== null && ' \u00b7 '}
           {progress.daysRemaining !== null && `${progress.daysRemaining} ${text.days} ${text.remaining}`}
         </p>
@@ -74,7 +74,7 @@ export function MaintenanceCard({ odometerKm, demoTasks, onDemoCta }: Props) {
         </div>
         <div className="mt-4 flex justify-between gap-3">
           <button onClick={onDemoCta} className="rounded-xl bg-slate-800 px-3 py-2 text-xs font-medium text-white">{text.update}</button>
-          <Link href="/maintenance" className="py-2 text-xs font-semibold text-sky-600">{text.all} \u2192</Link>
+          <Link href="/maintenance" className="py-2 text-xs font-semibold text-sky-600">{text.all} {'\u2192'}</Link>
         </div>
       </>}
     </section>
