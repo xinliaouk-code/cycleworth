@@ -106,6 +106,13 @@ export default function DashboardPage() {
   const [shareOpen, setShareOpen] = useState(false)
 
   useEffect(() => {
+    if (!selectedRide) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = previousOverflow }
+  }, [selectedRide])
+
+  useEffect(() => {
     async function init() {
       const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams()
       const forceDemo = urlParams.get('demo') === 'true'
@@ -486,7 +493,10 @@ export default function DashboardPage() {
         >
           <div
             onClick={event => event.stopPropagation()}
-            className="w-full animate-in slide-in-from-bottom space-y-4 rounded-t-3xl border border-slate-100 bg-white p-5 shadow-2xl fade-in duration-200 md:w-[500px] md:rounded-2xl md:p-6"
+            role="dialog"
+            aria-modal="true"
+            aria-label={rideDetails.title}
+            className="h-[66dvh] w-full touch-pan-y overflow-y-auto overscroll-contain animate-in slide-in-from-bottom space-y-3 rounded-t-3xl border border-slate-100 bg-white p-4 shadow-2xl fade-in duration-200 md:h-auto md:max-h-[calc(100dvh-2rem)] md:w-[500px] md:rounded-2xl md:p-6"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
@@ -523,13 +533,13 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            <div className="w-full h-56 rounded-2xl overflow-hidden relative border border-slate-100">
+            <div className="h-40 w-full overflow-hidden rounded-2xl border border-slate-100 md:h-56">
               <RideMap polyline={selectedRide.summary_polyline} />
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="rounded-xl border border-slate-100 bg-sky-50/60 p-3"><span className="text-slate-500">{lang === 'zh' ? '平均速度' : 'Average speed'}</span><strong className="mt-1 flex items-center gap-1 text-sm text-slate-800"><Gauge className="h-3.5 w-3.5 text-sky-600" />{((selectedRide.average_speed ?? ((selectedRide.distance / 1000) / (selectedRide.moving_time / 3600) / 3.6)) * 3.6).toFixed(1)} km/h</strong></div>
-              <div className="rounded-xl border border-slate-100 bg-indigo-50/60 p-3"><span className="text-slate-500">{lang === 'zh' ? '最高速度' : 'Top speed'}</span><strong className="mt-1 flex items-center gap-1 text-sm text-slate-800"><Gauge className="h-3.5 w-3.5 text-indigo-600" />{((selectedRide.max_speed ?? (selectedRide.average_speed ?? ((selectedRide.distance / 1000) / (selectedRide.moving_time / 3600) / 3.6)) * 1.25) * 3.6).toFixed(1)} km/h</strong></div>
+              <div className="rounded-xl border border-slate-100 bg-sky-50/60 p-2.5"><span className="text-slate-500">{lang === 'zh' ? '平均速度' : 'Average speed'}</span><strong className="mt-1 flex items-center gap-1 text-sm text-slate-800"><Gauge className="h-3.5 w-3.5 text-sky-600" />{((selectedRide.average_speed ?? ((selectedRide.distance / 1000) / (selectedRide.moving_time / 3600) / 3.6)) * 3.6).toFixed(1)} km/h</strong></div>
+              <div className="rounded-xl border border-slate-100 bg-indigo-50/60 p-2.5"><span className="text-slate-500">{lang === 'zh' ? '最高速度' : 'Top speed'}</span><strong className="mt-1 flex items-center gap-1 text-sm text-slate-800"><Gauge className="h-3.5 w-3.5 text-indigo-600" />{((selectedRide.max_speed ?? (selectedRide.average_speed ?? ((selectedRide.distance / 1000) / (selectedRide.moving_time / 3600) / 3.6)) * 1.25) * 3.6).toFixed(1)} km/h</strong></div>
             </div>
 
             <ElevationProfile ride={selectedRide} />
