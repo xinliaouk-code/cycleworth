@@ -27,14 +27,14 @@ export function AchievementPanel({ lang, settings }: { lang: Lang; settings: TfL
     const longestRide = Math.max(0, ...rides.map(ride => ride.distance / 1000))
     const make = (id: string, icon: string, title: string, titleZh: string, description: string, descriptionZh: string, progress: number, target: number, unit: string) => ({ id, icon, title: { en: title, zh: titleZh }, description: { en: description, zh: descriptionZh }, progress, target, valueLabel: `${progress.toFixed(unit === 'rides' ? 0 : 1)} / ${target}${unit === 'rides' ? '' : ` ${unit}`}` })
     return [
-      ...[50, 100, 250, 500, 1000, 2500].map(target => make(`distance-${target}`, '🚴', `${target} km rider`, `${target} 公里骑手`, `Ride ${target} km in total`, `累计骑行 ${target} 公里`, distance, target, 'km')),
-      ...[1, 10, 25, 50, 100].map(target => make(`rides-${target}`, '✨', `${target} rides`, `完成 ${target} 次骑行`, `Complete ${target} rides`, `完成 ${target} 次骑行`, count, target, 'rides')),
-      ...[10, 50, 100, 250].map(target => make(`savings-${target}`, '💷', `£${target} saved`, `节省 £${target}`, `Save £${target} by cycling`, `骑行节省 £${target}`, savings, target, '£')),
-      ...[15, 20, 25, 30].map(target => make(`speed-${target}`, '⚡', `${target} km/h peak`, `极速 ${target} km/h`, `Record a ${target} km/h top speed`, `最高速度达到 ${target} km/h`, topSpeed, target, 'km/h')),
-      ...[100, 500, 1000, 2500].map(target => make(`climb-${target}`, '⛰️', `${target} m climbed`, `累计爬升 ${target} 米`, `Climb ${target} m in total`, `累计爬升 ${target} 米`, elevation, target, 'm')),
-      ...[1000, 5000, 10000].map(target => make(`energy-${target}`, '🔥', `${target} kcal burned`, `消耗 ${target} 千卡`, `Burn ${target} kcal`, `累计消耗 ${target} 千卡`, calories, target, 'kcal')),
-      ...[50, 100].map(target => make(`roi-${target}`, '🎉', `${target}% paid back`, `回本 ${target}%`, `Reach ${target}% bike payback`, `自行车成本回收 ${target}%`, roi, target, '%')),
-      ...[10, 25].map(target => make(`longest-${target}`, '🏁', `${target} km single ride`, `单次 ${target} 公里`, `Finish one ${target} km ride`, `单次骑行达到 ${target} 公里`, longestRide, target, 'km')),
+      ...[50, 100, 250, 500, 1000, 2500].map((target, index) => make(`distance-${target}`, '🚴', `${target} km rider`, ['初上征途', '百里骑侠', '城市游侠', '半程远征', '千里单车', '骑行行者'][index], `Ride ${target} km in total`, `累计骑行 ${target} 公里`, distance, target, 'km')),
+      ...[1, 10, 25, 50, 100].map((target, index) => make(`rides-${target}`, '✨', `${target} rides`, ['初次出发', '十次打卡', '习惯养成', '风雨无阻', '百骑成章'][index], `Complete ${target} rides`, `完成 ${target} 次骑行`, count, target, 'rides')),
+      ...[10, 50, 100, 250].map((target, index) => make(`savings-${target}`, '💷', `£${target} saved`, ['省钱萌新', '省钱先锋', '精打细骑', '骑行理财家'][index], `Save £${target} by cycling`, `骑行节省 £${target}`, savings, target, '£')),
+      ...[15, 20, 25, 30].map((target, index) => make(`speed-${target}`, '⚡', `${target} km/h peak`, ['破风入门', '追风骑手', '疾风骑士', '风驰电掣'][index], `Record a ${target} km/h top speed`, `最高速度达到 ${target} km/h`, topSpeed, target, 'km/h')),
+      ...[100, 500, 1000, 2500].map((target, index) => make(`climb-${target}`, '⛰️', `${target} m climbed`, ['小试爬坡', '登高望远', '千米登阶', '山路征服者'][index], `Climb ${target} m in total`, `累计爬升 ${target} 米`, elevation, target, 'm')),
+      ...[1000, 5000, 10000].map((target, index) => make(`energy-${target}`, '🔥', `${target} kcal burned`, ['热量开张', '燃脂达人', '能量烈焰'][index], `Burn ${target} kcal`, `累计消耗 ${target} 千卡`, calories, target, 'kcal')),
+      ...[50, 100].map((target, index) => make(`roi-${target}`, '🎉', `${target}% paid back`, ['回本在望', '物超所值'][index], `Reach ${target}% bike payback`, `自行车成本回收 ${target}%`, roi, target, '%')),
+      ...[10, 25].map((target, index) => make(`longest-${target}`, '🏁', `${target} km single ride`, ['初征远方', '长途游侠'][index], `Finish one ${target} km ride`, `单次骑行达到 ${target} 公里`, longestRide, target, 'km')),
     ]
   }, [bikePrice, lang, rides, settings])
   const unlocked = achievements.filter(item => item.progress >= item.target).length
