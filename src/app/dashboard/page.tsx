@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import { Settings, SlidersHorizontal, X, Clock, Flame, Ruler, MapPin, ArrowRight } from 'lucide-react'
+import { Settings, SlidersHorizontal, X, Clock, Flame, Ruler, MapPin, ArrowRight, Gauge, Share2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
 // Components
@@ -17,6 +17,8 @@ import { RideList } from './_components/RideList'
 import { MaintenanceCard } from './_components/MaintenanceCard'
 import { RideHeatmap } from './_components/RideHeatmap'
 import { RideAdviceCard } from './_components/RideAdviceCard'
+import { ElevationProfile } from './_components/ElevationProfile'
+import { ImpactShareModal } from './_components/ImpactShareModal'
 
 // Utils & Types
 import { Ride, formatDateCN, calculateROI, prepareChartData } from './_lib/utils'
@@ -101,6 +103,7 @@ export default function DashboardPage() {
   const [fareSettings, setFareSettings] = useState(DEFAULT_TFL_FARE_SETTINGS)
   const [dashboardLayout, setDashboardLayout] = useState(DEFAULT_DASHBOARD_LAYOUT)
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null)
+  const [shareOpen, setShareOpen] = useState(false)
 
   useEffect(() => {
     async function init() {
@@ -346,6 +349,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
+            <button onClick={() => setShareOpen(true)} title={lang === 'zh' ? '生成骑行战报' : 'Generate riding report'} className="flex h-9 items-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50 px-2.5 text-xs font-bold text-sky-700 shadow-2xs transition hover:bg-sky-100 active:scale-95"><Share2 className="h-4 w-4" /><span className="hidden sm:inline">{lang === 'zh' ? '战报' : 'Report'}</span></button>
             <Link
               href="/settings"
               title={lang === 'zh' ? '设置' : 'Settings'}
@@ -523,6 +527,13 @@ export default function DashboardPage() {
               <RideMap polyline={selectedRide.summary_polyline} />
             </div>
 
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="rounded-xl border border-slate-100 bg-sky-50/60 p-3"><span className="text-slate-500">{lang === 'zh' ? '平均速度' : 'Average speed'}</span><strong className="mt-1 flex items-center gap-1 text-sm text-slate-800"><Gauge className="h-3.5 w-3.5 text-sky-600" />{((selectedRide.average_speed ?? ((selectedRide.distance / 1000) / (selectedRide.moving_time / 3600) / 3.6)) * 3.6).toFixed(1)} km/h</strong></div>
+              <div className="rounded-xl border border-slate-100 bg-indigo-50/60 p-3"><span className="text-slate-500">{lang === 'zh' ? '最高速度' : 'Top speed'}</span><strong className="mt-1 flex items-center gap-1 text-sm text-slate-800"><Gauge className="h-3.5 w-3.5 text-indigo-600" />{((selectedRide.max_speed ?? (selectedRide.average_speed ?? ((selectedRide.distance / 1000) / (selectedRide.moving_time / 3600) / 3.6)) * 1.25) * 3.6).toFixed(1)} km/h</strong></div>
+            </div>
+
+            <ElevationProfile ride={selectedRide} />
+
             <div className="flex items-center justify-between text-xs text-slate-600 bg-slate-50 p-3.5 rounded-xl border border-slate-100">
               <div className="min-w-0 flex-1 truncate">
                 <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">{rideDetails.start}</span>
@@ -537,6 +548,7 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+      <ImpactShareModal open={shareOpen} onClose={() => setShareOpen(false)} rides={rides} fareSettings={fareSettings} roi={roiData.roiPercentageStr} lang={lang} />
     </main>
   )
 }

@@ -182,6 +182,10 @@ export async function POST(request: Request) {
         headers: { Authorization: `Bearer ${currentAccessToken}` }
       }).then(async response => response.ok ? response.json() : null).catch(() => null)
       const calories = detailedActivity?.calories ?? act.calories ?? act.kilojoules ?? null
+      const streamData = await fetch(`https://www.strava.com/api/v3/activities/${act.id}/streams?keys=altitude&key_by_type=true`, {
+        headers: { Authorization: `Bearer ${currentAccessToken}` }
+      }).then(async response => response.ok ? response.json() : null).catch(() => null)
+      const elevationProfile = Array.isArray(streamData?.altitude?.data) ? streamData.altitude.data.filter((value: unknown) => typeof value === 'number') : null
 
       const baseFields = {
         name: act.name,
@@ -194,6 +198,10 @@ export async function POST(request: Request) {
         end_station: endStation,
         summary_polyline: summaryPolyline,
         calories,
+        total_elevation_gain: detailedActivity?.total_elevation_gain ?? act.total_elevation_gain ?? null,
+        average_speed: detailedActivity?.average_speed ?? act.average_speed ?? null,
+        max_speed: detailedActivity?.max_speed ?? act.max_speed ?? null,
+        elevation_profile: elevationProfile,
         strava_activity_id: act.id
       }
 
