@@ -1,0 +1,6 @@
+{
+  "name": "CycleWorth",
+  "description": "Quantify and track financial savings and ROI from cycling commutes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
