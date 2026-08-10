@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import { Settings, SlidersHorizontal, X, Clock, Flame, Ruler, MapPin, ArrowRight, Gauge, Share2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
@@ -345,8 +346,8 @@ export default function DashboardPage() {
         <header className="flex items-center justify-between gap-3 px-1">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sky-600 text-xs font-black text-white shadow-xs">
-                CW
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-100 bg-white shadow-xs">
+                <Image src="/brand/cycleworth-icon-hd.png" alt="CycleWorth" width={96} height={96} priority className="h-full w-full object-cover" />
               </span>
               <h1 className="text-xl font-extrabold text-slate-900 tracking-tight md:text-2xl">
                 CycleWorth
