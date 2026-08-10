@@ -153,8 +153,8 @@ export function RideAdviceCard({ initialData }: { initialData?: Advice } = {}) {
           icon: AlertTriangle,
         }
       : {
-          bg: 'bg-gradient-to-br from-emerald-50/60 via-white to-sky-50/40 border-emerald-200/80',
-          badge: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+          bg: 'bg-gradient-to-br from-emerald-200/80 via-emerald-50/85 to-sky-100/70 border-emerald-300/90 shadow-[0_12px_30px_-20px_rgba(5,150,105,0.7)]',
+          badge: 'bg-emerald-600 text-white border-emerald-700 shadow-sm',
           title: 'text-emerald-700',
           icon: CheckCircle2,
         }
@@ -263,4 +263,3 @@ function Metric({
     </div>
   )
 }
-
