@@ -1,6 +1,7 @@
 'use client'
 
 import type { SavingsCategory, TfLFareSettings } from '../../lib/tfl/fares'
+import { AchievementPanel } from './AchievementPanel'
 
 export function SavingsRules({ settings, onChange, lang }: { settings: TfLFareSettings; onChange: (settings: TfLFareSettings) => void; lang: 'en' | 'zh' }) {
   const options: Array<[SavingsCategory, string]> = lang === 'zh'
@@ -12,5 +13,5 @@ export function SavingsRules({ settings, onChange, lang }: { settings: TfLFareSe
       : [...settings.savingsCategories, category]
     onChange({ ...settings, savingsCategories, savingsMode: savingsCategories.length === 1 && savingsCategories[0] === 'commute' ? 'commute_only' : 'all_eligible' })
   }
-  return <div className="space-y-2">{options.map(([category, label]) => <label key={category} className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-100 p-3 text-sm text-slate-700"><input type="checkbox" checked={settings.savingsCategories.includes(category)} onChange={() => toggle(category)} className="h-4 w-4 accent-sky-600" />{label}</label>)}</div>
+  return <div className="space-y-2">{options.map(([category, label]) => <label key={category} className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-100 p-3 text-sm text-slate-700"><input type="checkbox" checked={settings.savingsCategories.includes(category)} onChange={() => toggle(category)} className="h-4 w-4 accent-sky-600" />{label}</label>)}<div className="mt-6 border-t border-slate-100 pt-5"><h3 className="mb-3 text-base font-bold text-slate-800">{lang === 'zh' ? '成就与里程碑' : 'Achievements & milestones'}</h3><AchievementPanel lang={lang} settings={settings} /></div></div>
 }

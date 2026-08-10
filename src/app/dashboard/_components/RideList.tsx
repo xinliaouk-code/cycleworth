@@ -253,7 +253,7 @@ export function RideList(p: RideListProps) {
                           </div>
                         </div>
 
-                        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-slate-500 font-medium">
+                        <div className={`mt-1.5 flex min-w-0 flex-nowrap items-center gap-1.5 whitespace-nowrap font-medium text-slate-500 ${lang === 'zh' ? 'text-[11px]' : 'text-xs'}`}>
                           <span>{formatDateCN(ride.start_date, lang)}</span>
                           <span>•</span>
                           <span className="flex items-center gap-1">
@@ -314,5 +314,4 @@ export function RideList(p: RideListProps) {
     </section>
   )
 }
-
 
