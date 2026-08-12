@@ -1,8 +1,8 @@
 import type { Lang } from './i18n'
 
-export const dashboardCardClass = 'rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm md:p-6 transition-all hover:border-slate-300/80 hover:shadow-md'
+export const dashboardCardClass = 'glass-surface rounded-3xl border p-4 md:p-6 transition-all duration-300'
 export const dashboardCardTitleClass = 'text-base font-bold tracking-tight text-slate-800 md:text-lg'
-export const dashboardCollapseButtonClass = 'flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 active:scale-95'
+export const dashboardCollapseButtonClass = 'soft-control flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-slate-600 transition-all active:scale-95'
 
 const text = {
   en: {
@@ -52,4 +52,3 @@ const text = {
 } as const
 
 export function moduleText(lang: Lang) { return text[lang] }
-

@@ -341,12 +341,12 @@ export default function DashboardPage() {
   const rideDetails = lang === 'zh' ? { title: '\u9a91\u884c\u8def\u7ebf\u8be6\u60c5', start: '\u8d77\u70b9\u7ad9', end: '\u7ec8\u70b9\u7ad9', unknown: '\u672a\u77e5', minutes: '\u5206\u949f' } : { title: 'Ride details', start: 'Start station', end: 'End station', unknown: 'Unknown', minutes: 'min' }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-3 py-4 md:px-8 md:py-8 relative">
+    <main className="app-shell min-h-screen px-3 py-4 md:px-8 md:py-8 relative">
       <div className="mx-auto flex max-w-4xl flex-col gap-4 md:gap-6">
         <header className="flex items-center justify-between gap-3 px-1">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-100 bg-white shadow-xs">
+              <span className="soft-control flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl border shadow-xs">
                 <Image src="/brand/cycleworth-icon-hd.png" alt="CycleWorth" width={96} height={96} priority className="h-full w-full object-cover" />
               </span>
               <h1 className="text-xl font-extrabold text-slate-900 tracking-tight md:text-2xl">
@@ -361,7 +361,7 @@ export default function DashboardPage() {
             <Link
               href="/settings"
               title={lang === 'zh' ? '设置' : 'Settings'}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-2xs hover:bg-slate-50 active:scale-95 transition"
+              className="soft-control flex h-9 w-9 items-center justify-center rounded-xl border text-slate-600 shadow-2xs active:scale-95 transition"
             >
               <Settings className="h-4 w-4" />
             </Link>
@@ -369,7 +369,7 @@ export default function DashboardPage() {
             <Link
               href="/settings/layout"
               title={lang === 'zh' ? '自定义布局' : 'Layout'}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-2xs hover:bg-slate-50 active:scale-95 transition"
+              className="soft-control flex h-9 w-9 items-center justify-center rounded-xl border text-slate-600 shadow-2xs active:scale-95 transition"
             >
               <SlidersHorizontal className="h-4 w-4" />
             </Link>

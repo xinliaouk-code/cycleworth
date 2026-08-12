@@ -76,7 +76,9 @@ export function RideAdviceCard({ initialData }: { initialData?: Advice } = {}) {
   }, [])
 
   useEffect(() => {
-    if (!initialData) void load()
+    if (initialData) return
+    const timeoutId = window.setTimeout(() => { void load() }, 0)
+    return () => window.clearTimeout(timeoutId)
   }, [initialData, load])
 
   if (!data && loading) {

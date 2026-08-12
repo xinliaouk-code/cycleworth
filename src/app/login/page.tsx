@@ -21,8 +21,8 @@ export default function LoginPage() {
   }, [router])
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-sky-50 to-white p-4">
-      <div className="w-full max-w-md bg-white p-8 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 space-y-6">
+    <main className="app-shell flex min-h-screen items-center justify-center p-4">
+      <div className="glass-surface w-full max-w-md p-8 rounded-[2rem] border space-y-6">
         <div className="text-center">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-600 font-extrabold text-white text-lg shadow-sm">
             CW

@@ -10,8 +10,8 @@ function encodePolyline(points: [number, number][]): string {
     const late5 = Math.round(lat * 1e5)
     const lnge5 = Math.round(lng * 1e5)
 
-    let dLat = late5 - prevLat
-    let dLng = lnge5 - prevLng
+    const dLat = late5 - prevLat
+    const dLng = lnge5 - prevLng
 
     prevLat = late5
     prevLng = lnge5

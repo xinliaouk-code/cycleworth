@@ -109,6 +109,8 @@ export async function POST(request: Request) {
 
     let page = 1
     const perPage = 100
+    // Strava's activity schema is intentionally permissive here because fields vary by activity type.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const allActivities: any[] = []
 
     while (true) {
@@ -130,6 +132,7 @@ export async function POST(request: Request) {
       // 增量模式：尽早停在与基线重叠的旧活动上，避免拉全量。
       if (useIncremental && lastSyncedAt) {
         const reachedBaseline = activities.some(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (a: any) => a.start_date && new Date(a.start_date).getTime() / 1000 <= lastSyncedAt
         )
         if (reachedBaseline) break
@@ -151,14 +154,17 @@ export async function POST(request: Request) {
     const existingByKey = new Map<string, RidesRow>()
 
     if (existingRides) {
-      existingRides.forEach((r: any) => {
+      existingRides.forEach((r: RidesRow) => {
         if (r.strava_activity_id != null) existingByActivityId.set(r.strava_activity_id, r)
         if (r.name && r.start_date) existingByKey.set(`${r.name}_${r.start_date}`, r)
       })
     }
 
     // ── 改动 4：批量写入（收集后一次 upsert / 一次 insert） ──
+    // Rows mirror the flexible Supabase payload accepted by the generated table client.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rowsToUpdate: any[] = []
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rowsToInsert: any[] = []
 
     for (const act of allActivities) {
@@ -214,6 +220,7 @@ export async function POST(request: Request) {
           matchedRecord.is_manual_override &&
           matchedRecord.category != null &&
           matchedRecord.category !== ''
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const updateData: any = { ...baseFields }
         if (!hasManualCategory) {
           updateData.is_commute = isSavingsEligible
@@ -250,7 +257,7 @@ export async function POST(request: Request) {
     const syncedCount = rowsToUpdate.length + rowsToInsert.length
 
     return NextResponse.json({ success: true, count: syncedCount })
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+  } catch (err: unknown) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : 'Unexpected server error' }, { status: 500 })
   }
 }

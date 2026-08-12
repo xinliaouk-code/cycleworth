@@ -34,7 +34,10 @@ export function MaintenanceCard({ userId, odometerKm, demoTasks, onDemoCta }: Pr
     setTasks((data ?? []) as MaintenanceTask[])
   }
 
-  useEffect(() => { void load() }, [demoTasks, userId])
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => { void load() }, 0)
+    return () => window.clearTimeout(timeoutId)
+  }, [demoTasks, userId])
 
   const urgent = [...tasks].sort((a, b) => maintenanceProgress(b, odometerKm).ratio - maintenanceProgress(a, odometerKm).ratio)[0]
   if (!urgent) return null
@@ -156,4 +159,3 @@ export function MaintenanceCard({ userId, odometerKm, demoTasks, onDemoCta }: Pr
     </section>
   )
 }
-

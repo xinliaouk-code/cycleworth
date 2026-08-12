@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #eaf3f7;
+  --foreground: #172033;
 }
 
 @theme inline {
@@ -12,18 +12,25 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  min-height: 100vh;
 }
+
+::selection { background: rgb(103 232 249 / 0.55); color: #0f172a; }
+
+.app-shell { position: relative; isolation: isolate; overflow: hidden; background: radial-gradient(circle at 8% -6%, rgb(186 230 253 / 0.86), transparent 27rem), radial-gradient(circle at 96% 10%, rgb(196 181 253 / 0.42), transparent 25rem), radial-gradient(circle at 50% 100%, rgb(167 243 208 / 0.38), transparent 28rem), linear-gradient(135deg, #edf8fb 0%, #f7f8ff 47%, #edf8f3 100%); }
+.app-shell::before, .app-shell::after { position: absolute; z-index: -1; width: 22rem; height: 22rem; border-radius: 999px; content: ""; filter: blur(18px); opacity: 0.5; pointer-events: none; }
+.app-shell::before { top: 22rem; left: -12rem; background: #99f6e4; }
+.app-shell::after { top: -10rem; right: -9rem; background: #bfdbfe; }
+
+.glass-surface { border-color: rgb(255 255 255 / 0.72) !important; background: linear-gradient(135deg, rgb(255 255 255 / 0.82), rgb(248 250 252 / 0.56)) !important; box-shadow: 12px 12px 28px rgb(71 85 105 / 0.10), -10px -10px 26px rgb(255 255 255 / 0.74), inset 1px 1px 0 rgb(255 255 255 / 0.8) !important; backdrop-filter: blur(20px) saturate(1.18); -webkit-backdrop-filter: blur(20px) saturate(1.18); }
+.glass-surface:hover { transform: translateY(-2px); box-shadow: 15px 18px 34px rgb(71 85 105 / 0.13), -10px -10px 26px rgb(255 255 255 / 0.8), inset 1px 1px 0 rgb(255 255 255 / 0.86) !important; }
+.soft-control { border-color: rgb(255 255 255 / 0.8) !important; background: rgb(255 255 255 / 0.66) !important; box-shadow: 4px 4px 10px rgb(71 85 105 / 0.10), -3px -3px 8px rgb(255 255 255 / 0.82), inset 1px 1px 0 rgb(255 255 255 / 0.72); backdrop-filter: blur(12px); }
+.soft-control:hover { background: rgb(255 255 255 / 0.88) !important; }
+.app-shell input, .app-shell select, .app-shell textarea { border-color: rgb(203 213 225 / 0.65); background-color: rgb(255 255 255 / 0.62); box-shadow: inset 2px 2px 5px rgb(71 85 105 / 0.06), inset -1px -1px 3px rgb(255 255 255 / 0.8); }
 
 /* Keep the Zone fare editor light and card-like rather than browser-table heavy. */
 .overflow-hidden.rounded-xl.border {

@@ -2,8 +2,8 @@ import Link from 'next/link'
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
-      <div className="text-center space-y-6 max-w-2xl bg-white p-10 rounded-3xl shadow-sm border border-slate-100">
+    <main className="app-shell min-h-screen flex flex-col items-center justify-center p-4">
+      <div className="glass-surface text-center space-y-6 max-w-2xl p-10 rounded-[2rem] border">
         <h1 className="text-4xl md:text-5xl font-bold text-slate-800 tracking-tight">
           CycleWorth 🚲
         </h1>

@@ -16,13 +16,16 @@ interface RideListProps {
   fareSettings: TfLFareSettings
 }
 
+type SortBy = 'date' | 'distance' | 'savings'
+function isSortBy(value: string): value is SortBy { return value === 'date' || value === 'distance' || value === 'savings' }
+
 const categories = { commute: '通勤骑行', transport: '日常交通', leisure: '休闲骑行' }
 
 export function RideList(p: RideListProps) {
   const { lang } = useLanguage()
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
-  const [sortBy, setSortBy] = useState<'date' | 'distance' | 'savings'>('date')
+  const [sortBy, setSortBy] = useState<SortBy>('date')
 
   const text = lang === 'zh'
     ? {
@@ -139,7 +142,7 @@ export function RideList(p: RideListProps) {
             {/* Sort Dropdown */}
             <select
               value={sortBy}
-              onChange={e => setSortBy(e.target.value as any)}
+              onChange={e => { if (isSortBy(e.target.value)) setSortBy(e.target.value) }}
               className="rounded-xl border border-slate-200 bg-slate-50/80 px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition focus:border-sky-500 focus:bg-white"
             >
               <option value="date">{text.sortDate}</option>
@@ -202,7 +205,7 @@ export function RideList(p: RideListProps) {
               <p className="mt-2 text-xs font-semibold text-slate-500">{text.noRides}</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4 md:space-y-5">
               {filteredRides.map(ride => {
                 const category = ride.category || (ride.is_commute ? categories.transport : categories.leisure)
                 const rideSaving = getRideSaving(ride, p.fareSettings).toFixed(2)
@@ -221,9 +224,9 @@ export function RideList(p: RideListProps) {
                   <article
                     key={ride.id}
                     onClick={() => p.setSelectedRide(ride)}
-                    className="group relative cursor-pointer rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-2xs transition-all hover:border-sky-300 hover:shadow-md active:scale-[0.99] md:p-4"
+                    className="group relative min-h-[174px] cursor-pointer rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs transition-all hover:border-sky-300 hover:shadow-md active:scale-[0.99] md:min-h-[190px] md:p-5"
                   >
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="max-w-[200px] truncate text-base font-bold text-slate-900 group-hover:text-sky-600 transition-colors sm:max-w-[280px]">
@@ -283,7 +286,7 @@ export function RideList(p: RideListProps) {
                       </div>
                     </div>
 
-                    <div className="mt-3 flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50/70 p-2.5 text-xs">
+                    <div className="mt-4 flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-3 text-xs md:mt-5 md:p-3.5">
                       <div className="min-w-0 flex-1 truncate">
                         <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400">
                           {text.start}
@@ -314,4 +317,3 @@ export function RideList(p: RideListProps) {
     </section>
   )
 }
-

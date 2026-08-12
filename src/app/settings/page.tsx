@@ -50,7 +50,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-slate-100 bg-white shadow-sm">
+    <section className="glass-surface rounded-3xl border transition-all duration-300">
       <button
         onClick={onToggle}
         className="flex w-full items-center gap-2 p-5 text-left"
@@ -211,8 +211,9 @@ export default function Settings() {
     }
   }, [text.loadFailed]);
   useEffect(() => {
-    void load();
-  }, []);
+    const timeoutId = window.setTimeout(() => { void load(); }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [load]);
   const save = async () => {
     if (!userId) return;
     setSaving(true);
@@ -247,7 +248,7 @@ export default function Settings() {
     }
   };
   return (
-    <main className="min-h-screen bg-slate-50 p-4 md:p-10">
+    <main className="app-shell min-h-screen p-4 md:p-10">
       <div className="mx-auto max-w-3xl space-y-4">
         <header className="flex items-start justify-between">
           <div>
