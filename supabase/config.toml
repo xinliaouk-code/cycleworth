@@ -1,0 +1,5 @@
+project_id = "personal-projects-cycleworth"
+
+[api]
+schemas = ["personal_cycleworth"]
+extra_search_path = ["public", "extensions"]
