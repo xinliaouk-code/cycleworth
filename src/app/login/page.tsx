@@ -2,6 +2,7 @@
 
 import { Auth } from '@supabase/auth-ui-react'
 import { ThemeSupa } from '@supabase/auth-ui-shared'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -59,7 +60,7 @@ export default function LoginPage() {
         
         {/* Supabase 官方提供的核心登录组件 */}
         <Auth
-          supabaseClient={supabase}
+          supabaseClient={supabase as unknown as SupabaseClient}
           appearance={{
             theme: ThemeSupa,
             variables: {
