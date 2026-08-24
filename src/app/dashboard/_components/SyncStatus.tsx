@@ -86,29 +86,31 @@ export function SyncStatus(props: SyncStatusProps) {
                 {t.connectStrava}
               </a>
             ) : (
-              <span className="sm:hidden inline-flex items-center gap-1 rounded-md bg-emerald-100 px-2 py-1 text-xs font-bold text-emerald-800">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                {t.connected}
-              </span>
+              <>
+                <span className="sm:hidden inline-flex items-center gap-1 rounded-md bg-emerald-100 px-2 py-1 text-xs font-bold text-emerald-800">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                  {t.connected}
+                </span>
+
+                <button
+                  onClick={props.handleSync}
+                  disabled={props.isSyncing}
+                  className="inline-flex min-h-[38px] items-center gap-1.5 rounded-xl bg-sky-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-sky-700 active:scale-95 disabled:opacity-50 cursor-pointer"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${props.isSyncing ? 'animate-spin' : ''}`} />
+                  <span>{props.isSyncing ? t.syncing : t.syncData}</span>
+                </button>
+
+                <button
+                  onClick={props.handleFullResync}
+                  disabled={props.isSyncing}
+                  className="inline-flex min-h-[38px] items-center gap-1.5 rounded-xl bg-slate-800 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-slate-900 active:scale-95 disabled:opacity-50 cursor-pointer"
+                >
+                  <RotateCcw className={`h-3.5 w-3.5 ${props.isSyncing ? 'animate-spin' : ''}`} />
+                  <span>{props.isSyncing ? t.recalculating : t.fullResync}</span>
+                </button>
+              </>
             )}
-
-            <button
-              onClick={props.handleSync}
-              disabled={props.isSyncing}
-              className="inline-flex min-h-[38px] items-center gap-1.5 rounded-xl bg-sky-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-sky-700 active:scale-95 disabled:opacity-50 cursor-pointer"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${props.isSyncing ? 'animate-spin' : ''}`} />
-              <span>{props.isSyncing ? t.syncing : t.syncData}</span>
-            </button>
-
-            <button
-              onClick={props.handleFullResync}
-              disabled={props.isSyncing}
-              className="inline-flex min-h-[38px] items-center gap-1.5 rounded-xl bg-slate-800 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-slate-900 active:scale-95 disabled:opacity-50 cursor-pointer"
-            >
-              <RotateCcw className={`h-3.5 w-3.5 ${props.isSyncing ? 'animate-spin' : ''}`} />
-              <span>{props.isSyncing ? t.recalculating : t.fullResync}</span>
-            </button>
           </div>
         )}
       </div>

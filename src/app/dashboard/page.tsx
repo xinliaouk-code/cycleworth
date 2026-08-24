@@ -27,6 +27,7 @@ import { LanguageSwitcher, useLanguage } from '../../components/LanguageProvider
 import { DEFAULT_TFL_FARE_SETTINGS, parseTfLFareSettings } from '../../lib/tfl/fares'
 import { DEFAULT_DASHBOARD_LAYOUT, parseDashboardLayout } from '../../lib/dashboard-layout'
 import { demoRides, demoMaintenanceTasks, demoUser } from '../demo/mock-data'
+import { hasStravaConnection } from '../../lib/strava/connection-state'
 
 const RideMap = dynamic<{ polyline: string }>(
   () => import('../../components/RideMap'), 
@@ -78,7 +79,7 @@ export default function DashboardPage() {
   const router = useRouter()
   const [user, setUser] = useState<{ id: string; email?: string } | null>(demoUser)
   const [isDemoMode, setIsDemoMode] = useState(true)
-  const [isConnected, setIsConnected] = useState(true)
+  const [isConnected, setIsConnected] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
   const [rides, setRides] = useState<Ride[]>(demoRides)
   const [syncMsg, setSyncMsg] = useState('')
@@ -211,14 +212,13 @@ export default function DashboardPage() {
   }
 
   async function checkExistingConnection(userId: string) {
+    setIsConnected(false)
     const { data } = await supabase
       .from('strava_connections')
       .select('id')
       .eq('user_id', userId)
       .maybeSingle()
-    if (data) {
-      setIsConnected(true)
-    }
+    setIsConnected(hasStravaConnection(data))
   }
 
   async function fetchRides(userId: string) {
