@@ -1,5 +1,25 @@
 import { createClient } from '@supabase/supabase-js'
 
+type SupabaseClientFactory = typeof createClient
+
+/**
+ * Creates a database client that is scoped to the already-verified user.
+ * CycleWorth's RLS policies then enforce ownership without relying on a
+ * service-role key held in the deployment environment.
+ */
+export function createUserScopedClient(
+  accessToken: string,
+  clientFactory: SupabaseClientFactory = createClient,
+) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key'
+
+  return clientFactory(supabaseUrl, supabaseKey, {
+    db: { schema: 'personal_cycleworth' },
+    global: { headers: { Authorization: `Bearer ${accessToken}` } },
+  })
+}
+
 /**
  * 在服务端校验 Supabase 会话。
  *

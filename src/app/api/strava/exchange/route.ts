@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import { verifySession } from '../../../../lib/auth'
+import { createUserScopedClient, verifySession } from '../../../../lib/auth'
 
 export async function POST(request: Request) {
   try {
@@ -32,14 +31,14 @@ export async function POST(request: Request) {
     }
 
     // 2. 连接 Supabase
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      db: { schema: 'personal_cycleworth' },
-    })
+    const supabase = createUserScopedClient(accessToken!)
 
     // 3. 先删除该用户的旧记录，再插入新记录
-    await supabase.from('strava_connections').delete().eq('user_id', userId)
+    const { error: deleteError } = await supabase
+      .from('strava_connections')
+      .delete()
+      .eq('user_id', userId)
+    if (deleteError) throw deleteError
 
     // 将 Strava 返回的 Unix 时间戳转换为标准数据库时间格式
     const expiresAtDate = new Date(data.expires_at * 1000).toISOString()

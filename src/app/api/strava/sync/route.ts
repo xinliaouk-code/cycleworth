@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import { verifySession } from '../../../../lib/auth'
+import { createUserScopedClient, verifySession } from '../../../../lib/auth'
 import { getNearestStation } from '../../../../lib/strava/stations'
 import { classifyRide, CommuteSettings } from '../../../../lib/strava/classify'
 
@@ -42,11 +41,7 @@ export async function POST(request: Request) {
       eveningEnd: Number(eveningEnd)
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      db: { schema: 'personal_cycleworth' },
-    })
+    const supabase = createUserScopedClient(accessToken!)
 
     const { data: conn } = await supabase
       .from('strava_connections')
