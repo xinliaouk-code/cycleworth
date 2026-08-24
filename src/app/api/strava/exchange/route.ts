@@ -34,9 +34,7 @@ export async function POST(request: Request) {
     // 2. 连接 Supabase
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      db: { schema: 'personal_cycleworth' },
-    })
+    const supabase = createClient(supabaseUrl, supabaseKey)
 
     // 3. 先删除该用户的旧记录，再插入新记录
     await supabase.from('strava_connections').delete().eq('user_id', userId)

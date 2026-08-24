@@ -17,9 +17,7 @@ export async function verifySession(accessToken?: string): Promise<string | null
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key'
-  const supabase = createClient(supabaseUrl, supabaseKey, {
-    db: { schema: 'personal_cycleworth' },
-  })
+  const supabase = createClient(supabaseUrl, supabaseKey)
 
   const { data, error } = await supabase.auth.getUser(accessToken)
   if (error || !data.user) return null
