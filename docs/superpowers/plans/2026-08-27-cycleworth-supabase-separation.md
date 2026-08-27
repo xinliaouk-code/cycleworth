@@ -78,10 +78,10 @@
 - Produces: local link metadata pointing only to that target, one applied baseline, matching local/remote migration history, and read-only schema evidence.
 
 - [x] **Step 1: Stop at the missing target identity.** Do not run `supabase link`, `db push`, or `db query` against the current legacy ref; require the exact new project identity before proceeding.
-- [ ] **Step 2: Independently verify the new project.** Use non-secret project metadata to match its name, ref, URL, and `ACTIVE_HEALTHY` status; reject any mismatch or ambiguity.
-- [ ] **Step 3: Link only the verified ref and dry-run the baseline.** Confirm `.temp/project-ref` and `linked-project.json` match before a push; ensure the dry run lists only `202608270001_cycleworth_isolated_baseline.sql`.
-- [ ] **Step 4: Apply only the active baseline.** Run `supabase db push --linked` with the explicit new ref; never run reset, legacy migrations, or a full shared-project dump.
-- [ ] **Step 5: Validate the new project read-only.** Run `supabase/tests/validation.sql` and migration-list checks against the explicit new ref, recording only object/status assertions and no user data or credentials.
+- [x] **Step 2: Independently verify the new project.** Use non-secret project metadata to match its name, ref, URL, and `ACTIVE_HEALTHY` status; reject any mismatch or ambiguity.
+- [x] **Step 3: Link only the verified ref and dry-run the baseline.** Confirm `.temp/project-ref` and `linked-project.json` match before a push; ensure the dry run lists only `202608270001_cycleworth_isolated_baseline.sql`.
+- [x] **Step 4: Apply only the active baseline.** Run `supabase db push --linked` with the explicit new ref; never run reset, legacy migrations, or a full shared-project dump.
+- [x] **Step 5: Validate the new project read-only.** Run `supabase/tests/validation.sql` and migration-list checks against the explicit new ref, recording only object/status assertions and no user data or credentials.
 
 ### Task 4: Configure isolated Auth, Strava, and Vercel behavior
 
