@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# Supabase local link metadata (may identify an out-of-scope project)
+supabase/.temp/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

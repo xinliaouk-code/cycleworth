@@ -3,10 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "test": "node --experimental-strip-types --test --test-isolation=none",
     "dev": "next dev -p 3000 -H 0.0.0.0",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "supabase:verify": "node scripts/verify-supabase-isolation.mjs"
   },
   "dependencies": {
     "@supabase/auth-ui-react": "^0.4.7",

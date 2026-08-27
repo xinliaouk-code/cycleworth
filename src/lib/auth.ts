@@ -12,7 +12,7 @@ export function createUserScopedClient(
   clientFactory: SupabaseClientFactory = createClient,
 ) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key'
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 'placeholder-publishable-key'
 
   return clientFactory(supabaseUrl, supabaseKey, {
     db: { schema: 'personal_cycleworth' },
@@ -36,7 +36,7 @@ export async function verifySession(accessToken?: string): Promise<string | null
   if (!accessToken) return null
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key'
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 'placeholder-publishable-key'
   const supabase = createClient(supabaseUrl, supabaseKey, {
     db: { schema: 'personal_cycleworth' },
   })
