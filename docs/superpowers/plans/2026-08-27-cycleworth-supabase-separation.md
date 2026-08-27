@@ -101,10 +101,10 @@
 
 - [x] **Step 1: Confirm Auth callback behavior.** Determine whether the current Auth UI uses the default site URL/implicit callback or needs an explicit callback route; document the exact dedicated-project Site URL and redirect allowlist without changing the legacy project.
 - [x] **Step 2: Audit the Vercel project identity and variable names.** Confirm project `cycleworth` and stable URL `https://cycleworth.vercel.app`; inspect names only, never values.
-- [ ] **Step 3: Configure user-controlled variables.** Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` for required Vercel environments; retain existing legacy variables during acceptance; keep Strava secrets server-only and do not add a Supabase secret key.
+- [x] **Step 3: Configure user-controlled variables.** Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` for required Vercel environments; retain existing legacy variables during acceptance; keep Strava secrets server-only and do not add a Supabase secret key.
 - [ ] **Step 4: Test dedicated Auth and data paths.** With a fresh user-controlled account, test login/session/logout, settings and rides CRUD, two-user RLS isolation, export behavior, and unauthenticated blocking; never record passwords or tokens.
 - [ ] **Step 5: Test Strava only with user-controlled login.** Exercise OAuth exchange, connection persistence, preview/import/sync, disconnect preservation, and private-library/error behavior; mark the work pending if the user must complete an interactive login.
-- [ ] **Step 6: Deploy only the verified commit.** Push `main` after repository checks and required environment values are confirmed; wait for the GameLog-independent CycleWorth Vercel deployment and verify the stable URL without claiming authenticated success from public HTTP alone.
+- [x] **Step 6: Deploy only the verified commit.** Push `main` after repository checks and required environment values are confirmed; wait for the GameLog-independent CycleWorth Vercel deployment and verify the stable URL without claiming authenticated success from public HTTP alone.
 
 ### Task 5: Complete security, mobile, and delivery gates
 
