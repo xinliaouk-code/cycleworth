@@ -10,7 +10,9 @@ The app uses server-only Neon connections, verified-email identity mapping, owne
 
 Neon Free project `falling-sound-48715113` (CycleWorth), AWS London `aws-eu-west-2`, PostgreSQL 17. Isolated validation branch `br-royal-waterfall-zanv71f0`; main `br-little-smoke-za0kxi8g` untouched by acceptance fixtures. Managed Better Auth enabled on validation, Google provider removed. `001_v4_foundation.sql` and `002_v4_sync_results.sql` applied with checksums. The least-privilege `cycleworth_app` runtime login is distinct from the local migration owner.
 
-Vercel `cycleworth` received encrypted variables scoped exclusively to Preview / `codex/cycleworth-v4`. No Production variables changed. CLI Git push lacks a configured GitHub credential; a branch was created through the connected GitHub API. Preview source deployment and final remote commit details will be recorded below.
+Vercel `cycleworth` received encrypted variables scoped exclusively to Preview / `codex/cycleworth-v4`. No Production variables changed. CLI Git push lacks a configured GitHub credential; a branch was created through the connected GitHub API. The connected GitHub API published the full candidate as remote commit `4acb85cc885fbb7701f005f875151edb5b21c04e`. Its Git tree `21b6b3ef238f0276dc546f666710517e478f4910` exactly matches local `08e0c85b5d242b23c462b47c678c99585b358395`; local phase history is retained.
+
+V4 Preview: https://cycleworth-d6lb84son-x-ce13.vercel.app — **READY**, deployment `dpl_2PEQidp3B5Yv1YArVy66LRLAEzm8`, built from local `08e0c85b5d242b23c462b47c678c99585b358395`. This URL is registered with validation Neon Auth. Preview protection remains active; remote authenticated API/device acceptance is not claimed.
 
 ## Validation evidence
 
@@ -32,7 +34,7 @@ Vercel `cycleworth` received encrypted variables scoped exclusively to Preview /
 
 The production screenshot contains CARTO's API-key-required placeholder, while the route overlay still renders. `codex/cycleworth-map-fix` is based on existing `origin/main` and changes only `src/components/RideMap.tsx` to OSM tiles, visible attribution, resize handling and an explicit tile-error state. It is independent of the V4 data/auth migration.
 
-Map commit: `a1f0753754f8f4e7f7f52b9076c4abed4b778b88`.
+Local map commit: `a1f0753754f8f4e7f7f52b9076c4abed4b778b88`. Remote mirror: `25e1042ef0a5008ea37ee1563086a29f04772853`; both have tree `d3b100fb857d125675a353b8508d99ce3c363523`.
 Preview: https://cycleworth-c831a7u71-x-ce13.vercel.app/dashboard?demo=true — READY, protected by Vercel login.
 Deployment: `dpl_2LE6RikR9p3qoiDE2ia6pq8AK3BM`.
 The identical map component was visually verified locally on desktop/mobile. Production release requires the requested separate approval.
