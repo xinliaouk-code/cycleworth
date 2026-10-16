@@ -427,6 +427,7 @@ function DashboardContent() {
               </div>
 
               <button
+                aria-label={lang === 'zh' ? '关闭骑行详情' : 'Close ride details'}
                 onClick={() => setSelectedRide(null)}
                 className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 active:scale-95 cursor-pointer shrink-0"
               >
