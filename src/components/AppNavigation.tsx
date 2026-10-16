@@ -14,23 +14,26 @@ export function AppNavigationProvider({ children }: { children: React.ReactNode 
   const [ready, setReady] = useState(false)
   useEffect(() => {
     let active = true
+    let revision = 0
     const { data: { subscription } } = dataClient.auth.onAuthStateChange(async () => {
+      const current = ++revision
+      setReady(false)
       try {
         const session = (await dataClient.auth.getSession()).data.session
         const id = session?.user.id ?? null
-        if (!active) return
+        if (!active || current !== revision) return
         setOwner(id)
         if (id) {
           const { data, error } = await dataClient.from('settings').select('navigation_tabs').eq('id', id).maybeSingle()
           if (error) throw new Error(error.message)
-          if (active) setTabs(parseNavigation(data?.navigation_tabs))
+          if (active && current === revision) setTabs(parseNavigation(data?.navigation_tabs))
         } else {
           let saved: unknown = null
           try { saved = JSON.parse(localStorage.getItem('cw_demo_navigation') ?? 'null') } catch {}
-          if (active) setTabs(parseNavigation(saved))
+          if (active && current === revision) setTabs(parseNavigation(saved))
         }
-        if (active) setReady(true)
-      } catch { if (active) setReady(false) }
+        if (active && current === revision) setReady(true)
+      } catch { if (active && current === revision) setReady(false) }
     })
     return () => { active = false; subscription.unsubscribe() }
   }, [])

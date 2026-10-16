@@ -161,7 +161,7 @@ function EmailAuthForm({ onRedirecting }: { onRedirecting: () => void }) {
 
       {mode === 'sign_in' && (
         <p className="rounded-xl bg-slate-50 px-3 py-2.5 text-xs leading-5 text-slate-500">
-          V4 首次使用请以原邮箱注册并验证。旧密码不迁移，验证后关联历史数据。
+          V4 首次使用请注册并验证邮箱。旧密码不迁移；旧骑行记录暂未迁入，后续将单独核对迁移。
         </p>
       )}
     </form>
@@ -174,6 +174,7 @@ export default function LoginPage() {
 
   const redirectToDashboard = useCallback(() => {
     setIsRedirecting(true)
+    window.dispatchEvent(new Event('cycleworth-auth'))
     router.replace('/dashboard')
   }, [router])
 
