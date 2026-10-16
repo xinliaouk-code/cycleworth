@@ -1,5 +1,5 @@
 import { DEFAULT_TFL_FARE_SETTINGS, getTfLSingleFare, type TfLFareSettings } from '../../../lib/tfl/fares'
-import { getStationCoordinates } from '../../../lib/strava/stations'
+import { getStationCoordinates } from '../../../lib/rides/stations'
 
 export type Ride = { id: string; name: string; distance: number; calories?: number | null; moving_time: number; start_date: string; is_commute: boolean; category?: string; is_manual_override?: boolean; start_station?: string; end_station?: string; summary_polyline: string; total_elevation_gain?: number | null; average_speed?: number | null; max_speed?: number | null; elevation_profile?: number[] | null }
 

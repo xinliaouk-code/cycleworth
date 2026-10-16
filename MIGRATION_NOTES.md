@@ -1,4 +1,16 @@
+> Historical V1–V3 notes below. For V4, use `docs/CYCLEWORTH_V4_OPERATIONS.md` and `docs/CYCLEWORTH_V4_DELIVERY.md`. On 2026-10-16 the dedicated Supabase source was INACTIVE; old ACTIVE_HEALTHY statements below are historical. No V4 production cutover has occurred.
+
 # CycleWorth Supabase separation notes
+
+## Apple Health work on 2026-10-16
+
+The local feature branch adds three incremental migrations after the unchanged
+dedicated baseline. None was applied remotely in this task. See
+[Apple Health delivery](docs/APPLE_HEALTH_DELIVERY.md) for migration/rollback order,
+local test evidence and remaining real-device/hosted-platform acceptance.
+The strict verification script now requires the exact dedicated ref, rather than
+accepting any non-legacy link. No local CLI link or deployment state was invented.
+The historical separation/cutover record below describes earlier work only.
 
 Status as of 2026-08-27: the dedicated project is verified, its repository baseline is applied, and the user has configured the new Vercel Production variables. Auth Dashboard configuration and authenticated acceptance are still pending.
 

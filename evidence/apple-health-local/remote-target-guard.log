@@ -1,0 +1,7 @@
+
+> cycleworth@0.1.0 supabase:verify
+> node scripts/verify-supabase-isolation.mjs --require-dedicated-target
+
+CycleWorth Supabase isolation scan: 58 source files, 4 active migration(s)
+WARN: no local Supabase CLI project link is present; exact dedicated target is still pending
+FAIL: remote operations require the exact dedicated ref qmegopdnnkfrnhtohvhe; the current link is missing or different

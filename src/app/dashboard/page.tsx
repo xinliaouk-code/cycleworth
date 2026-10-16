@@ -1,12 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useEffect, useState } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
-import { Settings, SlidersHorizontal, X, Clock, Flame, Ruler, MapPin, ArrowRight, Gauge, Share2 } from 'lucide-react'
-import { supabase } from '../../lib/supabase'
+import { Settings, SlidersHorizontal, X, Clock, Flame, Ruler, ArrowRight, Gauge, Share2 } from 'lucide-react'
+import { dataClient } from '../../lib/data-client'
+
+import { navigationHref, navigationIds, navigationLabels, viewSections, type NavigationId } from '../../lib/navigation'
 
 // Components
 import { StatsGrid } from './_components/StatsGrid'
@@ -27,7 +29,6 @@ import { LanguageSwitcher, useLanguage } from '../../components/LanguageProvider
 import { DEFAULT_TFL_FARE_SETTINGS, parseTfLFareSettings } from '../../lib/tfl/fares'
 import { DEFAULT_DASHBOARD_LAYOUT, parseDashboardLayout } from '../../lib/dashboard-layout'
 import { demoRides, demoMaintenanceTasks, demoUser } from '../demo/mock-data'
-import { hasStravaConnection } from '../../lib/strava/connection-state'
 
 const RideMap = dynamic<{ polyline: string }>(
   () => import('../../components/RideMap'), 
@@ -75,12 +76,17 @@ function loadBikePrice() {
 }
 
 export default function DashboardPage() {
+  return <Suspense fallback={<main className="app-shell p-6">CycleWorth…</main>}><DashboardContent /></Suspense>
+}
+function DashboardContent() {
+  const search = useSearchParams()
+  const requestedView = search.get('view') ?? 'overview'
+  const view = Object.hasOwn(viewSections, requestedView) ? requestedView : 'overview'
+
   const { t, lang } = useLanguage()
   const router = useRouter()
   const [user, setUser] = useState<{ id: string; email?: string } | null>(demoUser)
   const [isDemoMode, setIsDemoMode] = useState(true)
-  const [isConnected, setIsConnected] = useState(false)
-  const [isSyncing, setIsSyncing] = useState(false)
   const [rides, setRides] = useState<Ride[]>(demoRides)
   const [syncMsg, setSyncMsg] = useState('')
   
@@ -118,26 +124,21 @@ export default function DashboardPage() {
     async function init() {
       const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams()
       const forceDemo = urlParams.get('demo') === 'true'
-      const isPlaceholderSupabase = !process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder')
 
-      if (forceDemo || isPlaceholderSupabase) {
+      if (forceDemo) {
         setIsDemoMode(true)
         setUser(demoUser)
         setRides(demoRides)
-        setIsConnected(true)
         return
       }
 
       let session = null
       try {
-        const sessionPromise = supabase.auth.getSession()
-        const timeoutPromise = new Promise<{ data: { session: null } }>((resolve) =>
-          setTimeout(() => resolve({ data: { session: null } }), 1000)
-        )
-        const res = await Promise.race([sessionPromise, timeoutPromise])
-        session = res.data.session
-      } catch (err) {
-        console.warn('Supabase auth session fetch error:', err)
+        session = (await dataClient.auth.getSession()).data.session
+      } catch {
+        setIsDemoMode(false); setRides([]); setUser(null)
+        setSyncMsg('Unable to load your account. Please sign in or retry.')
+        return
       }
 
       const activeUser = session?.user ?? null
@@ -146,29 +147,20 @@ export default function DashboardPage() {
         setIsDemoMode(true)
         setUser(demoUser)
         setRides(demoRides)
-        setIsConnected(true)
         return
       }
 
       setIsDemoMode(false)
       setUser(activeUser)
-      const accessToken = session?.access_token
-
-      const code = urlParams.get('code')
-      if (code) {
-        await handleExchangeCode(code, activeUser.id, accessToken)
-      } else {
-        await checkExistingConnection(activeUser.id)
-        await fetchRides(activeUser.id)
-        await fetchUserSettings(activeUser.id)
-      }
+      await fetchRides(activeUser.id)
+      await fetchUserSettings(activeUser.id)
     }
     init()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router])
 
   async function fetchUserSettings(userId: string) {
-    const { data } = await supabase
+    const { data } = await dataClient
       .from('settings')
       .select('bike_price, tfl_fare_settings')
       .eq('id', userId)
@@ -186,43 +178,8 @@ export default function DashboardPage() {
     }
   }
 
-  async function handleExchangeCode(code: string, userId: string, accessToken?: string) {
-    setSyncMsg('正在处理 Strava 授权并同步最新记录...')
-    setIsSyncing(true)
-    try {
-      const res = await fetch('/api/strava/exchange', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, accessToken })
-      })
-      if (res.ok) {
-        setIsConnected(true)
-        window.history.replaceState({}, document.title, '/dashboard')
-        await handleSyncInternal(accessToken, userId)
-        await fetchUserSettings(userId)
-      } else {
-        const errData = await res.json()
-        setSyncMsg('授权处理失败：' + (errData.error || '未知错误'))
-        setIsSyncing(false)
-      }
-    } catch {
-      setSyncMsg('请求异常，请检查网络')
-      setIsSyncing(false)
-    }
-  }
-
-  async function checkExistingConnection(userId: string) {
-    setIsConnected(false)
-    const { data } = await supabase
-      .from('strava_connections')
-      .select('id')
-      .eq('user_id', userId)
-      .maybeSingle()
-    setIsConnected(hasStravaConnection(data))
-  }
-
   async function fetchRides(userId: string) {
-    const { data } = await supabase
+    const { data } = await dataClient
       .from('rides')
       .select('*')
       .eq('user_id', userId)
@@ -244,7 +201,7 @@ export default function DashboardPage() {
     } : r))
 
     if (!isDemoMode && user?.id) {
-      const { error } = await supabase
+      const { error } = await dataClient
         .from('rides')
         .update({ 
           is_commute: isSavingsEligible, 
@@ -257,49 +214,10 @@ export default function DashboardPage() {
     }
   }
 
-  async function handleSyncInternal(accessToken: string | undefined, userId: string, fullResync = false) {
-    try {
-      const res = await fetch('/api/strava/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          accessToken, homeStation, officeStation, morningStart, morningEnd, eveningStart, eveningEnd, fullResync
-        })
-      })
-      const result = await res.json()
-      if (result.success) {
-        setSyncMsg(fullResync
-          ? `全量重算完成！已用最新站点库重新计算全部 ${result.count} 条骑行分类。`
-          : `同步完成！已按规则识别类别，并完美保留你的手动修改。`)
-        fetchRides(userId)
-      } else {
-        setSyncMsg('同步失败：' + (result.error || '未知错误'))
-      }
-    } catch {
-      setSyncMsg('同步请求发起失败')
-    } finally {
-      setIsSyncing(false)
-    }
-  }
-
-  // 全量重算：忽略增量基线，重新拉取 Strava 全部历史并按最新站点库重算分类
-  async function handleFullResync() {
-    if (!user) return
-    setIsSyncing(true)
-    if (isDemoMode) {
-      setSyncMsg(lang === 'zh' ? '演示模式：已根据最新站点规则归类 40 条骑行记录。' : 'Demo Mode: Classified 40 sample rides.')
-      setTimeout(() => setIsSyncing(false), 500)
-      return
-    }
-    setSyncMsg('正在全量重算：会重新拉取全部历史骑行并按最新站点库归类，可能需要几分钟...')
-    const { data: { session } } = await supabase.auth.getSession()
-    await handleSyncInternal(session?.access_token, user.id, true)
-  }
-
   function handleSaveSettings() {
     const settings = { homeStation, officeStation, morningStart, morningEnd, eveningStart, eveningEnd }
     localStorage.setItem('cw_commute_settings', JSON.stringify(settings))
-    setSyncMsg(lang === 'zh' ? '多站点规则保存成功！重新点击“同步记录”即可刷新三大分类。' : 'Commute rules saved successfully.')
+    setSyncMsg(lang === 'zh' ? '通勤规则已保存；下一次导入时使用。' : 'Commute rules saved successfully.')
   }
 
   function handleBikePriceChange(price: string) {
@@ -310,34 +228,15 @@ export default function DashboardPage() {
   async function handleBikePriceBlur() {
     if (!user || isDemoMode) return
     const priceNum = parseFloat(bikePriceInput) || 0
-    await supabase.from('settings').upsert({ id: user.id, bike_price: priceNum }, { onConflict: 'id' })
+    await dataClient.from('settings').upsert({ id: user.id, bike_price: priceNum }, { onConflict: 'id' })
   }
-
-  const handleSync = async () => {
-    if (!user) return
-    setIsSyncing(true)
-    if (isDemoMode) {
-      setSyncMsg(lang === 'zh' ? '演示模式：与 Strava 样本库同步更新完成！' : 'Demo Mode: Synced with sample data!')
-      setTimeout(() => setIsSyncing(false), 500)
-      return
-    }
-    setSyncMsg('正在从 Strava 同步最新骑行数据...')
-    const { data: { session } } = await supabase.auth.getSession()
-    await handleSyncInternal(session?.access_token, user.id)
-  }
-
-  const DOMAIN = "https://cycleworth.vercel.app"
-  const clientId = process.env.NEXT_PUBLIC_STRAVA_CLIENT_ID
-  const redirectUri = `${DOMAIN}/dashboard`
-  const stravaAuthUrl = `https://www.strava.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&approval_prompt=auto&scope=read,activity:read_all`
 
   const totalDistanceKm = (rides.reduce((acc, r) => acc + (r.distance || 0), 0) / 1000).toFixed(1)
   const roiData = calculateROI(rides, bikePriceInput, fareSettings, lang)
   const chartData = prepareChartData(rides, fareSettings)
   const totalCalories = Math.round(rides.reduce((total, ride) => total + (Number(ride.calories) || 0), 0))
-  const syncFailed = syncMsg.includes('\u5931\u8d25') || syncMsg.toLowerCase().includes('failed')
   const sectionOrder = (id: import('../../lib/dashboard-layout').DashboardSection) => dashboardLayout.order.indexOf(id)
-  const isSectionVisible = (id: import('../../lib/dashboard-layout').DashboardSection) => !dashboardLayout.hidden.includes(id)
+  const isSectionVisible = (id: import('../../lib/dashboard-layout').DashboardSection) => viewSections[view].includes(id) && !dashboardLayout.hidden.includes(id)
   const rideDetails = lang === 'zh' ? { title: '\u9a91\u884c\u8def\u7ebf\u8be6\u60c5', start: '\u8d77\u70b9\u7ad9', end: '\u7ec8\u70b9\u7ad9', unknown: '\u672a\u77e5', minutes: '\u5206\u949f' } : { title: 'Ride details', start: 'Start station', end: 'End station', unknown: 'Unknown', minutes: 'min' }
 
   return (
@@ -353,15 +252,15 @@ export default function DashboardPage() {
                 CycleWorth
               </h1>
             </div>
-            <p className="text-xs font-medium text-slate-500 mt-0.5">{t.tagline}</p>
+            <p className="hidden sm:block text-xs font-medium text-slate-500 mt-0.5">{t.tagline}</p>
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
-            <button onClick={() => setShareOpen(true)} title={lang === 'zh' ? '生成骑行战报' : 'Generate riding report'} className="flex h-9 items-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50 px-2.5 text-xs font-bold text-sky-700 shadow-2xs transition hover:bg-sky-100 active:scale-95"><Share2 className="h-4 w-4" /><span className="hidden sm:inline">{lang === 'zh' ? '战报' : 'Report'}</span></button>
+            <button onClick={() => setShareOpen(true)} title={lang === 'zh' ? '生成骑行战报' : 'Generate riding report'} className="flex h-11 items-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50 px-2.5 text-xs font-bold text-sky-700 shadow-2xs transition hover:bg-sky-100 active:scale-95"><Share2 className="h-4 w-4" /><span className="hidden sm:inline">{lang === 'zh' ? '战报' : 'Report'}</span></button>
             <Link
               href="/settings"
               title={lang === 'zh' ? '设置' : 'Settings'}
-              className="soft-control flex h-9 w-9 items-center justify-center rounded-xl border text-slate-600 shadow-2xs active:scale-95 transition"
+              className="soft-control flex h-11 w-11 items-center justify-center rounded-xl border text-slate-600 shadow-2xs active:scale-95 transition"
             >
               <Settings className="h-4 w-4" />
             </Link>
@@ -369,12 +268,12 @@ export default function DashboardPage() {
             <Link
               href="/settings/layout"
               title={lang === 'zh' ? '自定义布局' : 'Layout'}
-              className="soft-control flex h-9 w-9 items-center justify-center rounded-xl border text-slate-600 shadow-2xs active:scale-95 transition"
+              className="soft-control flex h-11 w-11 items-center justify-center rounded-xl border text-slate-600 shadow-2xs active:scale-95 transition"
             >
               <SlidersHorizontal className="h-4 w-4" />
             </Link>
 
-            <LanguageSwitcher />
+            <div className="hidden sm:block"><LanguageSwitcher /></div>
 
             {user?.email && (
               <span className="hidden text-xs font-medium text-slate-400 lg:block truncate max-w-[160px]">
@@ -392,8 +291,8 @@ export default function DashboardPage() {
               </span>
               <span>
                 {lang === 'zh'
-                  ? 'AI Studio 演示模式：正在展示 40 趟伦敦真实骑行轨迹、省钱回报与维护数据。'
-                  : 'AI Studio Demo Mode: Showing 40 London ride activities & full analytics.'}
+                  ? '演示数据 · 登录后查看自己的骑行'
+                  : 'Demo data · Sign in for your own rides'}
               </span>
             </div>
             <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
@@ -414,11 +313,17 @@ export default function DashboardPage() {
                 href="/login"
                 className="font-bold text-sky-700 hover:text-sky-800 bg-white/90 hover:bg-white px-3 py-1 rounded-lg border border-sky-200/80 shadow-2xs transition active:scale-95"
               >
-                {lang === 'zh' ? '登录真实 Strava 账号 →' : 'Connect Strava Account →'}
+                {lang === 'zh' ? '登录并导入骑行 →' : 'Sign in & import rides →'}
               </Link>
             </div>
           </div>
         )}
+
+        <div className="flex items-start justify-between gap-4 px-1">
+          <div><p className="text-xs font-medium uppercase tracking-widest text-emerald-700">{lang === 'zh' ? '骑行生活' : 'Your cycling life'}</p><h2 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">{navigationLabels[view as NavigationId][lang]}</h2><p className="mt-2 text-sm text-slate-500">{({ overview: { zh: '每一次出发，都有所收获。', en: 'Every ride adds up.' }, rides: { zh: '记录每段路，回看每次出发。', en: 'Every journey, in one place.' }, bike: { zh: '了解爱车的价值，照顾它的状态。', en: 'Keep your bike in good shape.' }, trends: { zh: '让坚持可见。', en: 'See your consistency take shape.' } }[view] ?? { zh: '', en: '' })[lang]}</p></div>
+          <details className="relative shrink-0"><summary className="cursor-pointer rounded-xl border border-slate-200 bg-white/80 px-3 py-3 text-xs font-semibold text-slate-600">{lang === 'zh' ? '全部功能' : 'Explore'}</summary><div className="absolute right-0 top-full z-30 mt-2 grid w-44 gap-1 rounded-2xl border border-slate-100 bg-white p-2 shadow-xl">{navigationIds.map(id => <Link key={id} href={navigationHref(id, search.get('demo') === 'true')} onClick={event => { event.currentTarget.closest('details')?.removeAttribute('open') }} className="rounded-xl px-3 py-3 text-sm hover:bg-emerald-50">{navigationLabels[id][lang]}</Link>)}</div></details>
+        </div>
+        {viewSections[view].every(id => dashboardLayout.hidden.includes(id)) && <p className="rounded-2xl bg-white p-5 text-sm text-slate-600">{lang === 'zh' ? '此页的模块已在布局设置中隐藏。' : 'This page’s modules are hidden in layout settings.'} <Link className="underline" href="/settings/layout">{lang === 'zh' ? '调整布局' : 'Edit layout'}</Link></p>}
 
         {isSectionVisible('advice') && <div style={{ order: sectionOrder('advice') }}><RideAdviceCard /></div>}
 
@@ -456,12 +361,7 @@ export default function DashboardPage() {
         {isSectionVisible('sync') && <div style={{ order: sectionOrder('sync') }}><SyncStatus 
           collapseSync={collapseSync}
           setCollapseSync={setCollapseSync}
-          isConnected={isConnected}
-          stravaAuthUrl={stravaAuthUrl}
-          handleSync={handleSync}
-          handleFullResync={handleFullResync}
-          isSyncing={isSyncing}
-          errorMessage={syncFailed ? syncMsg : undefined}
+          demo={isDemoMode}
         /></div>}
 
         {syncMsg && (
@@ -497,7 +397,7 @@ export default function DashboardPage() {
             role="dialog"
             aria-modal="true"
             aria-label={rideDetails.title}
-            className="h-[66dvh] w-full touch-pan-y overflow-y-auto overscroll-contain animate-in slide-in-from-bottom space-y-3 rounded-t-3xl border border-slate-100 bg-white p-4 shadow-2xl fade-in duration-200 md:h-auto md:max-h-[calc(100dvh-2rem)] md:w-[500px] md:rounded-2xl md:p-6"
+            className="ride-detail-sheet h-[66dvh] w-full touch-pan-y overflow-y-auto overscroll-contain animate-in slide-in-from-bottom space-y-3 rounded-t-3xl border border-slate-100 bg-white p-4 shadow-2xl fade-in duration-200 md:h-auto md:max-h-[calc(100dvh-2rem)] md:w-[500px] md:rounded-2xl md:p-6"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
@@ -540,7 +440,7 @@ export default function DashboardPage() {
 
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="rounded-xl border border-slate-100 bg-sky-50/60 p-2.5"><span className="text-slate-500">{lang === 'zh' ? '平均速度' : 'Average speed'}</span><strong className="mt-1 flex items-center gap-1 text-sm text-slate-800"><Gauge className="h-3.5 w-3.5 text-sky-600" />{((selectedRide.average_speed ?? ((selectedRide.distance / 1000) / (selectedRide.moving_time / 3600) / 3.6)) * 3.6).toFixed(1)} km/h</strong></div>
-              <div className="rounded-xl border border-slate-100 bg-indigo-50/60 p-2.5"><span className="text-slate-500">{lang === 'zh' ? '最高速度' : 'Top speed'}</span><strong className="mt-1 flex items-center gap-1 text-sm text-slate-800"><Gauge className="h-3.5 w-3.5 text-indigo-600" />{((selectedRide.max_speed ?? (selectedRide.average_speed ?? ((selectedRide.distance / 1000) / (selectedRide.moving_time / 3600) / 3.6)) * 1.25) * 3.6).toFixed(1)} km/h</strong></div>
+              <div className="rounded-xl border border-slate-100 bg-indigo-50/60 p-2.5"><span className="text-slate-500">{lang === 'zh' ? '最高速度' : 'Top speed'}</span><strong className="mt-1 flex items-center gap-1 text-sm text-slate-800"><Gauge className="h-3.5 w-3.5 text-indigo-600" />{selectedRide.max_speed == null ? '—' : `${(selectedRide.max_speed * 3.6).toFixed(1)} km/h`}</strong></div>
             </div>
 
             <ElevationProfile ride={selectedRide} />

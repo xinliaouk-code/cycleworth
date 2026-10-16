@@ -1,12 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { getAuthErrorMessage } from '../../lib/auth-errors'
-import { supabase } from '../../lib/supabase'
+import { authClient } from '../../lib/auth/client'
+import { dataClient } from '../../lib/data-client'
 
-type AuthMode = 'sign_in' | 'sign_up' | 'forgot_password' | 'update_password'
+type AuthMode = 'sign_in' | 'sign_up' | 'forgot_password' | 'update_password' | 'verify_email'
 
 function getRedirectUrl(path = '/login') {
   if (typeof window === 'undefined') return undefined
@@ -15,28 +16,18 @@ function getRedirectUrl(path = '/login') {
 
 function EmailAuthForm({ onRedirecting }: { onRedirecting: () => void }) {
   const [mode, setMode] = useState<AuthMode>('sign_in')
+  const [otp, setOtp] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
-  const modeRef = useRef(mode)
-  useEffect(() => { modeRef.current = mode }, [mode])
-
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setMode('update_password')
-        setError('')
-        setMessage('请设置一个新的 CycleWorth 登录密码。')
-      }
-      if (event === 'SIGNED_IN' && modeRef.current !== 'update_password') {
-        onRedirecting()
-      }
-    })
-    return () => subscription.unsubscribe()
-  }, [onRedirecting])
+    if (new URLSearchParams(window.location.search).get('token')) {
+      queueMicrotask(() => setMode('update_password'))
+    }
+  }, [])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -48,45 +39,41 @@ function EmailAuthForm({ onRedirecting }: { onRedirecting: () => void }) {
       setError('请输入邮箱地址。')
       return
     }
-    if (mode !== 'forgot_password' && password.length < 6) {
-      setError('密码至少需要 6 个字符。')
+    if (!['forgot_password','verify_email'].includes(mode) && password.length < 8) {
+      setError('密码至少需要 8 个字符。')
       return
     }
 
     setIsLoading(true)
     try {
       if (mode === 'sign_in') {
-        const { error: authError } = await supabase.auth.signInWithPassword({
-          email: trimmedEmail,
-          password,
-        })
+        const { data, error: authError } = await authClient.signIn.email({ email: trimmedEmail, password })
         if (authError) throw authError
-        onRedirecting()
+        if (!data?.user?.emailVerified) {
+          const result = await authClient.emailOtp.sendVerificationOtp({ email: trimmedEmail, type: 'email-verification' })
+          if (result.error) throw result.error
+          setMode('verify_email'); setMessage('请输入邮箱收到的验证码。')
+        } else onRedirecting()
       } else if (mode === 'sign_up') {
-        const { data, error: authError } = await supabase.auth.signUp({
-          email: trimmedEmail,
-          password,
-          options: { emailRedirectTo: getRedirectUrl() },
-        })
-        if (authError) throw authError
-        if (data.session) {
-          onRedirecting()
-        } else {
-          setMessage('注册成功！请打开确认邮件，再回来登录。')
-          setMode('sign_in')
-        }
+        const result = await authClient.signUp.email({ email: trimmedEmail, password, name: trimmedEmail.split('@')[0] })
+        if (result.error) throw result.error
+        const sent = await authClient.emailOtp.sendVerificationOtp({ email: trimmedEmail, type: 'email-verification' })
+        if (sent.error) throw sent.error
+        setMode('verify_email'); setMessage('请输入邮箱验证码，验证后才能访问骑行数据。')
+      } else if (mode === 'verify_email') {
+        const result = await authClient.emailOtp.verifyEmail({ email: trimmedEmail, otp })
+        if (result.error) throw result.error
+        onRedirecting()
       } else if (mode === 'forgot_password') {
-        const { error: authError } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
-          redirectTo: getRedirectUrl('/login?reset=1'),
-        })
-        if (authError) throw authError
-        setMessage('重置密码邮件已发送，请检查收件箱和垃圾邮件文件夹。')
+        const result = await authClient.requestPasswordReset({ email: trimmedEmail, redirectTo: getRedirectUrl('/login?reset=1') })
+        if (result.error) throw result.error
+        setMessage('如该邮箱已注册，将收到重置邮件。请检查收件箱和垃圾邮件。')
       } else {
-        const { error: authError } = await supabase.auth.updateUser({ password })
-        if (authError) throw authError
-        setPassword('')
-        setMode('sign_in')
-        setMessage('密码已更新，请使用新密码登录。')
+        const token = new URLSearchParams(window.location.search).get('token') ?? undefined
+        const result = await authClient.resetPassword({ newPassword: password, token })
+        if (result.error) throw result.error
+        window.history.replaceState({}, '', '/login')
+        setPassword(''); setMode('sign_in'); setMessage('密码已更新，请使用新密码登录。')
       }
     } catch (authError) {
       setError(getAuthErrorMessage(authError))
@@ -99,7 +86,7 @@ function EmailAuthForm({ onRedirecting }: { onRedirecting: () => void }) {
   const isUpdatePassword = mode === 'update_password'
   const isSignUp = mode === 'sign_up'
 
-  const copy = isUpdatePassword
+  const copy = mode === 'verify_email' ? { title: '验证邮箱', button: '验证', loading: '验证中…' } : isUpdatePassword
     ? { title: '设置新密码', button: '更新密码', loading: '更新中…' }
     : isForgotPassword
       ? { title: '重置密码', button: '发送重置邮件', loading: '发送中…' }
@@ -126,14 +113,14 @@ function EmailAuthForm({ onRedirecting }: { onRedirecting: () => void }) {
         </label>
       )}
 
-      {!isForgotPassword && (
+      {!isForgotPassword && mode !== 'verify_email' && (
         <label className="block space-y-1.5">
           <span className="text-sm font-semibold text-slate-700">{isUpdatePassword ? '新密码' : isSignUp ? '设置密码' : '密码'}</span>
           <input
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            placeholder={isUpdatePassword || isSignUp ? '至少 6 个字符' : '你的密码'}
+            placeholder={isUpdatePassword || isSignUp ? '至少 8 个字符' : '你的密码'}
             autoComplete={isSignUp || isUpdatePassword ? 'new-password' : 'current-password'}
             className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
             disabled={isLoading}
@@ -141,6 +128,7 @@ function EmailAuthForm({ onRedirecting }: { onRedirecting: () => void }) {
         </label>
       )}
 
+      {mode === 'verify_email' && <label className="block text-sm">邮箱验证码<input value={otp} onChange={e=>setOtp(e.target.value)} autoComplete="one-time-code" inputMode="numeric" className="mt-2 w-full rounded-xl border p-3" /></label>}
       {message && <p className="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2.5 text-sm font-medium leading-5 text-emerald-700">{message}</p>}
       {error && <p role="alert" className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-2.5 text-sm font-medium leading-5 text-rose-700">{error}</p>}
 
@@ -173,7 +161,7 @@ function EmailAuthForm({ onRedirecting }: { onRedirecting: () => void }) {
 
       {mode === 'sign_in' && (
         <p className="rounded-xl bg-slate-50 px-3 py-2.5 text-xs leading-5 text-slate-500">
-          刚注册无法登录？请先点击邮箱确认链接；Supabase 会将未确认邮箱和错误密码显示为同一条提示。
+          V4 首次使用请以原邮箱注册并验证。旧密码不迁移，验证后关联历史数据。
         </p>
       )}
     </form>
@@ -190,12 +178,12 @@ export default function LoginPage() {
   }, [router])
 
   useEffect(() => {
-    const recoveryRequested = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('reset') === '1'
+    const recoveryRequested = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('token')
     if (recoveryRequested) return
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    dataClient.auth.getSession().then(({ data: { session } }) => {
       if (session) redirectToDashboard()
-    })
+    }).catch(() => { /* Verification or configuration error stays on login. */ })
   }, [redirectToDashboard])
 
   return (
@@ -206,7 +194,7 @@ export default function LoginPage() {
             CW
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-800">登录 CycleWorth</h1>
-          <p className="mt-2 text-sm text-slate-500">连接你的 Strava 骑行数据，量化你的财务与健康回报</p>
+          <p className="mt-2 text-sm text-slate-500">导入你的 Apple Health 骑行数据，量化你的财务与健康回报</p>
         </div>
 
         <Link

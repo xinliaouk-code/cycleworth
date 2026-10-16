@@ -1,0 +1,37 @@
+
+> cycleworth@0.1.0 lint
+> eslint
+
+
+/Users/starxin/Developer/Projects/DevHobby1 - Cycle/src/app/dashboard/_components/BikeROICard.tsx
+  3:90   warning  'Award' is defined but never used     @typescript-eslint/no-unused-vars
+  3:97   warning  'Sparkles' is defined but never used  @typescript-eslint/no-unused-vars
+  3:107  warning  'Trophy' is defined but never used    @typescript-eslint/no-unused-vars
+
+/Users/starxin/Developer/Projects/DevHobby1 - Cycle/src/app/dashboard/_components/ImpactShareModal.tsx
+  16:1592  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+
+/Users/starxin/Developer/Projects/DevHobby1 - Cycle/src/app/dashboard/_components/MaintenanceCard.tsx
+  40:6  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/starxin/Developer/Projects/DevHobby1 - Cycle/src/app/dashboard/_components/RideAdviceCard.tsx
+  19:30  warning  'dashboardCardTitleClass' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/starxin/Developer/Projects/DevHobby1 - Cycle/src/app/dashboard/_components/RideList.tsx
+  4:16  warning  'MapPin' is defined but never used  @typescript-eslint/no-unused-vars
+  4:81  warning  'Filter' is defined but never used  @typescript-eslint/no-unused-vars
+  4:96  warning  'Zap' is defined but never used     @typescript-eslint/no-unused-vars
+
+/Users/starxin/Developer/Projects/DevHobby1 - Cycle/src/app/dashboard/_components/WeeklyChart.tsx
+  4:34  warning  'BarChart2' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/starxin/Developer/Projects/DevHobby1 - Cycle/src/app/dashboard/page.tsx
+  8:63  warning  'MapPin' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/starxin/Developer/Projects/DevHobby1 - Cycle/src/app/settings/AccountPanel.tsx
+  28:5  warning  Do not use `window.location.assign()` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+
+/Users/starxin/Developer/Projects/DevHobby1 - Cycle/src/app/settings/page.tsx
+  70:9  warning  'router' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+✖ 13 problems (0 errors, 13 warnings)

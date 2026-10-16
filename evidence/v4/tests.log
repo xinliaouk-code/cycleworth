@@ -1,0 +1,42 @@
+
+> cycleworth@4.0.0 test
+> node --experimental-strip-types --test --test-isolation=none
+
+(node:71914) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/starxin/.codex/worktrees/cycleworth-v4/DevHobby1%20-%20Cycle/src/lib/auth-errors.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/starxin/.codex/worktrees/cycleworth-v4/DevHobby1 - Cycle/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:71914) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/starxin/.codex/worktrees/cycleworth-v4/DevHobby1%20-%20Cycle/src/app/dashboard/_lib/utils.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/starxin/.codex/worktrees/cycleworth-v4/DevHobby1 - Cycle/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ explains invalid login credentials as an email confirmation or password issue (0.632208ms)
+✔ keeps useful Neon auth errors visible (0.049ms)
+✔ explains a missing local Neon configuration (0.045042ms)
+✔ data protocol rejects cross-user fields, SQL injection and forbidden writes (0.27075ms)
+✔ maintenance cannot reference another owner task; settings are scoped (1048.487125ms)
+✔ credentials use 256 random bits and SHA256; no recoverable secret is stored (0.831958ms)
+✔ HTTP API covers auth, dry-run, disabled writes, owner binding, repeats, partial failures, rotation and revocation (731.002667ms)
+✔ token writes can import authorized history; errors, limits, transport and quotas are explicit (704.52ms)
+✔ anonymous callers cannot invoke owner APIs/private import with a chosen owner (470.758792ms)
+✔ history HTTP writes require a separate server gate and explicit confirmation; approved local import is idempotent (395.952667ms)
+✔ malformed manual uploads record a failure without advancing last success (386.328958ms)
+✔ V2 parser maps metres, active/elapsed seconds, timezone, GPS and commute (0.338583ms)
+✔ polyline matches the standard precision-5 reference vector (0.026375ms)
+✔ strict dates reject host timezone assumptions and invalid calendar/offset; DST offsets preserve instants (0.09425ms)
+✔ miles/metres, missing/zero distance, missing/invalid GPS, non-London and indoor rides are safe (0.286166ms)
+✔ rejects V1, unsupported units, malformed required fields and oversized batches/routes (0.22475ms)
+✔ file and cross-batch repeats are idempotent; dry run writes nothing; manual overrides survive; candidates are held (387.412334ms)
+✔ JSON body limit enforces actual bytes without trusting content-length (1.818542ms)
+✔ preserves routes longer than 5000 points and converts optional physical metrics (1.890708ms)
+✔ Neon schema preserves legacy fields, isolates owners and blocks direct ride insertion (414.119959ms)
+✔ encrypted migration preserves every source field and identity, retries safely, detects corruption (426.518166ms)
+✔ Health rides feed existing commute/savings/chart/maintenance utilities once per accepted ride (395.12625ms)
+ℹ tests 22
+ℹ suites 0
+ℹ pass 22
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5499.827666

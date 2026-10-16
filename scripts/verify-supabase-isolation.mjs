@@ -7,6 +7,7 @@ const activeMigrationsDir = path.join(repoRoot, 'supabase', 'migrations')
 const archivedMigrationsDir = path.join(repoRoot, 'supabase', 'legacy-migrations')
 const linkedProjectRefPath = path.join(repoRoot, 'supabase', '.temp', 'project-ref')
 const legacyProjectRef = 'rmckneoiqdxgarwitepo'
+const dedicatedProjectRef = 'qmegopdnnkfrnhtohvhe'
 const requiredBaseline = '202608270001_cycleworth_isolated_baseline.sql'
 const requiredArchivedMigrations = [
   '202608230001_personal_cycleworth.sql',
@@ -167,6 +168,9 @@ async function main() {
     if (error?.code !== 'ENOENT') throw error
   }
 
+  if (requireDedicatedTarget && linkedProjectRef !== dedicatedProjectRef) {
+    errors.push(`remote operations require the exact dedicated ref ${dedicatedProjectRef}; the current link is missing or different`)
+  }
   if (linkedProjectRef === legacyProjectRef) {
     const message = `local Supabase CLI link still points to legacy shared project ${legacyProjectRef}`
     if (requireDedicatedTarget) {
@@ -181,6 +185,12 @@ async function main() {
   }
 
   const config = await readText(path.join(repoRoot, 'supabase', 'config.toml'))
+  if (requireDedicatedTarget && !config.includes(`project_id = "${dedicatedProjectRef}"`)) {
+    errors.push('supabase/config.toml does not match the exact dedicated project ref')
+  }
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_URL !== `https://${dedicatedProjectRef}.supabase.co`) {
+    errors.push('runtime Supabase URL does not match the exact dedicated project')
+  }
   if (config.includes('project_id = "personal-projects-cycleworth"')) {
     warnings.push('supabase/config.toml still has the pre-separation placeholder project_id; set the exact dedicated ref only after it is verified')
   }
@@ -195,8 +205,8 @@ async function main() {
   }
 
   console.log('PASS: runtime key model, schema scope, migration safety, and historical archive checks passed')
-  if (requireDedicatedTarget && linkedProjectRef !== legacyProjectRef && linkedProjectRef) {
-    console.log('PASS: a non-legacy local link is present; independently verify its exact ref before remote push')
+  if (requireDedicatedTarget && linkedProjectRef === dedicatedProjectRef) {
+    console.log('PASS: local link matches the exact dedicated CycleWorth ref; independently verify remote project identity before migration')
   } else {
     console.log('PENDING: dedicated Supabase project identity is required before remote migration or production cutover')
   }

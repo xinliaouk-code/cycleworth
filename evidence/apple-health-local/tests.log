@@ -1,0 +1,36 @@
+
+> cycleworth@0.1.0 test
+> node --experimental-strip-types --test --test-isolation=none
+
+✔ creates a CycleWorth client scoped to the verified user token (0.662792ms)
+✔ does not fall back to the removed anonymous-key environment name (0.046458ms)
+✔ treats a missing Strava connection row as disconnected (0.032ms)
+✔ treats a Strava connection row as connected (0.024208ms)
+✔ explains invalid login credentials as an email confirmation or password issue (0.044042ms)
+✔ keeps useful Supabase auth errors visible (0.024792ms)
+✔ explains a missing local Supabase configuration (0.026ms)
+✔ credentials use 256 random bits and SHA256; no recoverable secret is stored (0.301875ms)
+✔ Health runtime refuses any database URL other than the dedicated project (0.162959ms)
+✔ HTTP API covers auth, dry-run, disabled writes, owner binding, repeats, partial failures, rotation and revocation (599.810042ms)
+✔ token writes cannot import pre-credential history; errors, limits, transport and quotas are explicit (466.837709ms)
+✔ anonymous callers cannot invoke owner APIs/private import with a chosen owner (384.837ms)
+✔ history HTTP writes require a separate server gate and explicit confirmation; approved local import is idempotent (372.828708ms)
+✔ V2 parser maps metres, active/elapsed seconds, timezone, GPS and commute (0.169208ms)
+✔ polyline matches the standard precision-5 reference vector (0.021083ms)
+✔ strict dates reject host timezone assumptions and invalid calendar/offset; DST offsets preserve instants (0.091834ms)
+✔ miles/metres, missing/zero distance, missing/invalid GPS, non-London and indoor rides are safe (0.270208ms)
+✔ rejects V1, unsupported units, malformed required fields and oversized batches/routes (0.234458ms)
+✔ file and cross-batch repeats are idempotent; dry run writes nothing; manual overrides survive; candidates are held (392.378708ms)
+✔ JSON body limit enforces actual bytes without trusting content-length (1.648375ms)
+✔ source identity is per-user; rides retain owner RLS and manual classifications (361.451708ms)
+✔ incremental migration backfills Strava identity without changing historical values; rollback preserves rides (375.936375ms)
+✔ Health rides feed existing commute/savings/chart/maintenance utilities once per accepted ride (366.133ms)
+✔ a later Strava insert is held after Health, including the database race guard; unrelated rides remain writable (375.538166ms)
+ℹ tests 24
+ℹ suites 0
+ℹ pass 24
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3793.778333

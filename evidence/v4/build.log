@@ -1,0 +1,43 @@
+
+> cycleworth@4.0.0 build
+> next build --webpack
+
+▲ Next.js 16.4.2 (webpack)
+- Environments: .env.local
+✓ Running next.config.ts took 9ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 3.8s
+  Running TypeScript ...
+  Finished TypeScript in 1691ms ...
+  Collecting page data using 11 workers ...
+  Generating static pages using 11 workers (0/17) ...
+  Generating static pages using 11 workers (4/17) 
+  Generating static pages using 11 workers (8/17) 
+  Generating static pages using 11 workers (12/17) 
+✓ Generating static pages using 11 workers (17/17) in 5.9s
+  Finalizing page optimization ...
+  Collecting build traces ...
+
+Route (app)                  Revalidate  Expire
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/auth/[...path]
+├ ƒ /api/data
+├ ƒ /api/health/credentials
+├ ƒ /api/health/import
+├ ƒ /api/health/sync
+├ ƒ /api/me
+├ ○ /api/ride-advice                30m      1y
+├ ○ /dashboard
+├ ○ /demo
+├ ○ /login
+├ ○ /maintenance
+├ ○ /settings
+├ ○ /settings/health
+└ ○ /settings/layout
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

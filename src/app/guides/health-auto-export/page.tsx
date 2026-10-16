@@ -1,0 +1,25 @@
+import Link from 'next/link'
+export const metadata = { title: 'Apple Watch 自动同步指南 · CycleWorth' }
+const options = [
+ ['自动化类型', 'REST API'], ['URL', 'https://cycleworth.vercel.app/api/health/sync'],
+ ['请求方式 / 格式', 'POST · JSON · Export Version 2'], ['数据类型', 'Workouts（运动），筛选 Cycling（骑行）'],
+ ['路线 / 运动指标', 'Include Route Data 开；Include Workout Metrics 开；时间分组 Minutes'],
+ ['日期范围', 'Default（昨天 + 今天），避免首次失败后漏掉昨天的骑行'],
+ ['频率', '每 1 小时尝试一次；不是实时保证'], ['分批 / 超时', 'Batch Requests 开；Request Timeout 120 秒'],
+ ['Header 1', 'Authorization: Bearer <你的专用同步凭证>'], ['Header 2（首次）', 'X-CycleWorth-Dry-Run: true'],
+ ['Header 2（启用后）', 'X-CycleWorth-Dry-Run: false'],
+]
+export default function HealthGuide() {
+ return <main className="app-shell min-h-screen px-4 py-6 md:py-12"><article className="mx-auto max-w-3xl space-y-7 rounded-3xl border border-white/80 bg-white/90 p-5 text-sm leading-7 text-slate-700 md:p-10">
+ <Link href="/settings/health" className="font-semibold text-emerald-800">← 返回同步设置 / Sync settings</Link>
+ <header><p className="text-xs uppercase tracking-widest text-emerald-700">CycleWorth · iPhone guide</p><h1 className="mt-2 text-3xl font-bold leading-tight text-slate-900">Apple Watch 骑行自动同步</h1><p className="mt-3">Apple Watch → iPhone「健康」→ Health Auto Export → CycleWorth。网站不直接读取手表；导出 App 在 iPhone 上获得你的健康数据读取授权后，向 CycleWorth 发送骑行 JSON。</p></header>
+ <section><h2 className="text-xl font-bold text-slate-900">1. 先让手表记录到手机</h2><p>在 Apple Watch「体能训练」记录户外或室内骑行。结束后等待记录出现在 iPhone「健身」/「健康」中；需要地图时，先确认该次户外骑行在手机上有路线。安装 Health Auto Export，并确认你的付费方案已解锁 Automations / REST API。授权读取运动、骑行距离、能量及运动路线等需要的数据；路线权限或 GPS 缺失时，网站无法补出真实轨迹。</p></section>
+ <section><h2 className="text-xl font-bold text-slate-900">2. 在 CycleWorth 接通账号</h2><ol className="list-decimal space-y-2 pl-5"><li>注册或登录，并完成邮箱验证码验证。当前使用新的 Neon 正式库，旧骑行记录暂未迁入。</li><li>打开「设置 → Apple Health Sync」，点击「生成同步凭证」。它是专用导入密钥，不是账号密码。</li><li>在同一台 iPhone 点击「在 Health Auto Export 中配置」。这会新建一条已预填的自动化。首次使用预览模式，不会新增骑行。</li><li>如果没有打开 App，按下面表格手动配置。不要把凭证或完整配置链接发给别人。</li></ol></section>
+ <section><h2 className="text-xl font-bold text-slate-900">3. 核对导出配置</h2><div className="mt-3 overflow-x-auto"><table className="w-full text-left"><thead><tr><th className="border-b p-2">项目</th><th className="border-b p-2">CycleWorth 推荐值</th></tr></thead><tbody>{options.map(([key,value])=><tr key={key}><td className="border-b border-slate-100 p-2 align-top font-medium">{key}</td><td className="break-words border-b border-slate-100 p-2">{value}</td></tr>)}</tbody></table></div><p className="mt-2">预填链接未指定运动类型筛选，请在 App 中选择 Cycling。服务端也会跳过非骑行运动；无需上传整套健康指标。</p><p><a className="underline" href="https://help.healthyapps.dev/en/health-auto-export/automations/rest-api/">官方 REST API 设置</a> · <a className="underline" href="https://help.healthyapps.dev/en/health-auto-export/automations/deep-link/">官方快捷配置链接说明</a></p></section>
+ <section><h2 className="text-xl font-bold text-slate-900">4. 首次检查，再开启自动写入</h2><ol className="list-decimal space-y-2 pl-5"><li>保持 iPhone 解锁，在 Health Auto Export 自动化内点 Manual Export，选择一条已完整同步的骑行所在日期，再 Export。</li><li>回到 CycleWorth 刷新状态。预览结果中的「新增」是预计导入量；预览成功不等于骑行已保存。检查失败数、距离和日期。</li><li>点击「开启新增骑行写入」。回到 Health Auto Export，把 X-CycleWorth-Dry-Run 的值改为 false；保留同一条自动化，不必重复创建。</li><li>再次手动运行。CycleWorth 结果应显示「写入」，在「骑行」里看到记录。再跑一次应显示「已存在」，数量不再增加。</li></ol></section>
+ <section><h2 className="text-xl font-bold text-slate-900">5. 日常尽量自动化</h2><p>在 iPhone 设置里允许 Health Auto Export 使用后台 App 刷新和网络，日常保留每小时尝试同步。iOS 锁屏时不能读取健康数据，低电量模式和后台调度也会延迟导出，因此不能承诺骑完立即到账。骑行后解锁、打开导出 App 是可靠的补跑方式。网站不需要一直打开。</p><p>可额外创建快捷指令：搜索 Auto Export → Run Automation → 选择 CycleWorth Cycling。先手动运行确认有效，再在「自动化」中添加每天回家后的时间触发；选择确认后运行，解锁后执行。不要依赖锁屏时的定时任务读取健康数据。<a className="underline" href="https://help.healthyapps.dev/en/health-auto-export/automations/schedule-automations-using-shortcuts/">官方快捷指令步骤</a></p></section>
+ <section><h2 className="text-xl font-bold text-slate-900">6. 历史骑行与数据规则</h2><p>历史补录可在导出 App 的 Manual Export 中选日期，建议从一天开始，分批逐渐补齐；或导出 JSON 后在 CycleWorth「同步 → 手动导入 JSON」先预览再确认新增。每次请求最多 4 MiB、100 条运动；单条路线最多 50,000 个点。遇到 413 请缩小批次；超长的单条路线无法仅靠批次拆分解决。</p><p>同一 Workout ID 重传不重复计数；与已有记录相似的骑行会暂缓导入供复核。现有记录及手动分类不会被重传覆盖。因此请在手机中距离和路线完整后首次正式导入；已导入的缺失路线目前不会自动补齐。旧 Supabase 记录另行迁移，导入 Apple Health 不能恢复旧手动标签或养护历史。</p><p>保存：日期、时长、距离、路线、可用的平均/最高速度、爬升、热量与高程轮廓。未提供的指标显示缺失；平均速度可由距离与时长计算。当前不提供心率、踏频、功率或睡眠分析。室内骑行没有真实路线；缺少 GPS 的骑行可手动分类。</p></section>
+ <section><h2 className="text-xl font-bold text-slate-900">7. 排错与安全</h2><ul className="list-disc space-y-2 pl-5"><li>没有请求：检查手机是否解锁、健康授权、网络与自动化 Activity Logs。</li><li>401：Header 凭证错误或已撤销；轮换后更新导出 App 的 Authorization。</li><li>403：检查 CycleWorth 写入开关及 dry-run 值；手动历史导入还需页面确认。</li><li>413 / 路线过长：缩小日期范围并开分批；先查看日志确认是否为单条超限。</li><li>429：等待至少 60 秒后重试。503 / 超时：稍后重跑同一批即可，重复请求不会重复新增。</li><li>200 不代表一定新增；207 表示部分条目失败。检查 CycleWorth 的新增、已存在、待复核、失败和跳过计数。</li><li>只有折线没有道路：检查地图网络；没有路线则先检查 Apple 健身里的原始记录。</li><li>凭证只显示一次，网站数据库保存其哈希；撤销后旧自动化无法写入。建议不要截图或分享凭证。</li></ul></section>
+ <footer className="border-t border-slate-200 pt-4 text-xs text-slate-500">配置依据：HealthyApps 官方文档，核对于 2026-10-17。App 菜单可能随版本或语言改变。真实手表到 iPhone 的首次同步，需要你在设备上完成健康授权与导出验证。</footer>
+ </article></main>
+}

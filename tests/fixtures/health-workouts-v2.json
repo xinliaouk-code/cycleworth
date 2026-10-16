@@ -1,0 +1,29 @@
+{
+  "data": {
+    "workouts": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440001",
+        "name": "Cycling",
+        "start": "2026-10-12 08:10:00 +0100",
+        "end": "2026-10-12 08:40:00 +0100",
+        "duration": 1600,
+        "distance": { "qty": 8.2, "units": "km" },
+        "isIndoor": false,
+        "route": [
+          { "latitude": 51.5106, "longitude": 0.0234, "timestamp": "2026-10-12 08:10:00 +0100" },
+          { "latitude": 51.5134, "longitude": -0.089, "timestamp": "2026-10-12 08:40:00 +0100" }
+        ]
+      },
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440002",
+        "name": "Cycling",
+        "start": "2026-10-13 18:00:00 +0800",
+        "end": "2026-10-13 18:20:00 +0800",
+        "duration": 1200,
+        "isIndoor": true
+      },
+      { "id": "not-a-ride", "name": "Running" },
+      { "id": "bad-unit", "name": "Cycling", "start": "2026-10-14 08:00:00 +0100", "end": "2026-10-14 08:30:00 +0100", "duration": 1800, "distance": { "qty": 9, "units": "bananas" } }
+    ]
+  }
+}

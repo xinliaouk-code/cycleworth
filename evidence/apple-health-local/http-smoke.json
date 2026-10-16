@@ -1,0 +1,61 @@
+[
+  {
+    "path": "/",
+    "status": 200,
+    "expected": 200
+  },
+  {
+    "path": "/dashboard",
+    "status": 200,
+    "expected": 200
+  },
+  {
+    "path": "/demo",
+    "status": 200,
+    "expected": 200
+  },
+  {
+    "path": "/settings",
+    "status": 200,
+    "expected": 200
+  },
+  {
+    "path": "/settings/health",
+    "status": 200,
+    "expected": 200
+  },
+  {
+    "path": "/maintenance",
+    "status": 200,
+    "expected": 200
+  },
+  {
+    "path": "/login",
+    "status": 200,
+    "expected": 200
+  },
+  {
+    "path": "/api/strava/sync",
+    "status": 401,
+    "expected": 401,
+    "response": {
+      "error": "未登录或会话已过期"
+    }
+  },
+  {
+    "path": "/api/health/import",
+    "status": 400,
+    "expected": 400,
+    "response": {
+      "error": "HTTPS is required"
+    }
+  },
+  {
+    "path": "/api/health/sync",
+    "status": 400,
+    "expected": 400,
+    "response": {
+      "error": "HTTPS is required"
+    }
+  }
+]

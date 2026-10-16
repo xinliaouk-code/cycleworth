@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "../../lib/supabase";
+import { dataClient } from "../../lib/data-client";
 import {
   DEFAULT_TFL_FARE_SETTINGS,
   parseTfLFareSettings,
@@ -20,7 +20,10 @@ import {
 } from "../../components/LanguageProvider";
 import { SavingsRules } from "./SavingsRules";
 import { AchievementPanel } from "./AchievementPanel";
+import { NavigationSettings } from "../../components/AppNavigation";
 import { AccountPanel } from "./AccountPanel";
+import { HealthSyncPanel } from './health/HealthSyncPanel'
+import { HealthSourceLink } from "./HealthSourceLink";
 import { demoMaintenanceTasks } from "../demo/mock-data";
 
 const rows: Array<[FareKey, string]> = [
@@ -150,7 +153,7 @@ export default function Settings() {
     try {
       const {
         data: { session },
-      } = await supabase.auth.getSession();
+      } = await dataClient.auth.getSession();
       if (!session?.user) {
         setTasks(demoMaintenanceTasks);
         setLoading(false);
@@ -162,22 +165,22 @@ export default function Settings() {
         { data: saved, error: settingsError },
         { data: rides, error: ridesError },
       ] = await Promise.all([
-        supabase
+        dataClient
           .from("settings")
           .select("tfl_fare_settings")
           .eq("id", id)
           .maybeSingle(),
-        supabase.from("rides").select("distance").eq("user_id", id),
+        dataClient.from("rides").select("distance").eq("user_id", id),
       ]);
       if (settingsError || ridesError) throw settingsError ?? ridesError;
       if (saved?.tfl_fare_settings)
         setSettings(parseTfLFareSettings(saved.tfl_fare_settings));
       const odometerKm =
         (rides ?? []).reduce(
-          (total, ride) => total + (Number(ride.distance) || 0),
+          (total: number, ride: {distance: number}) => total + (Number(ride.distance) || 0),
           0,
         ) / 1000;
-      const { error: defaultsError } = await supabase
+      const { error: defaultsError } = await dataClient
         .from("bike_maintenance_tasks")
         .upsert(
           defaultMaintenanceTasks.map(
@@ -198,7 +201,7 @@ export default function Settings() {
           { onConflict: "user_id,task_type", ignoreDuplicates: true },
         );
       if (defaultsError) throw defaultsError;
-      const { data: savedTasks, error: tasksError } = await supabase
+      const { data: savedTasks, error: tasksError } = await dataClient
         .from("bike_maintenance_tasks")
         .select("*")
         .eq("user_id", id);
@@ -220,7 +223,7 @@ export default function Settings() {
     setMessage(null);
     try {
       const results = await Promise.all([
-        supabase
+        dataClient
           .from("settings")
           .upsert(
             { id: userId, tfl_fare_settings: settings },
@@ -229,7 +232,7 @@ export default function Settings() {
         ...tasks
           .filter((task) => task.id)
           .map((task) =>
-            supabase
+            dataClient
               .from("bike_maintenance_tasks")
               .update({
                 distance_interval_km: task.distance_interval_km,
@@ -280,6 +283,7 @@ export default function Settings() {
             {message.text}
           </div>
         )}
+        <NavigationSettings />
         <Section
           title={zh ? "账户" : "Account"}
           open={open.account}
@@ -288,6 +292,7 @@ export default function Settings() {
           }
         >
           <AccountPanel lang={lang} />
+          <div className="mt-3"><HealthSyncPanel lang={lang} /><HealthSourceLink lang={lang} /></div>
         </Section>
         <Section
           title={text.rules}
