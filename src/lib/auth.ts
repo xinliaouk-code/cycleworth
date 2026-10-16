@@ -1,47 +1,24 @@
-import { createClient } from '@supabase/supabase-js'
+import 'server-only'
+import { getAuth } from './auth/server'
+import { connect } from './db/connection'
+import { HttpError } from './health/http'
 
-type SupabaseClientFactory = typeof createClient
-
-/**
- * Creates a database client that is scoped to the already-verified user.
- * CycleWorth's RLS policies then enforce ownership without relying on a
- * service-role key held in the deployment environment.
- */
-export function createUserScopedClient(
-  accessToken: string,
-  clientFactory: SupabaseClientFactory = createClient,
-) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 'placeholder-publishable-key'
-
-  return clientFactory(supabaseUrl, supabaseKey, {
-    db: { schema: 'personal_cycleworth' },
-    global: { headers: { Authorization: `Bearer ${accessToken}` } },
-  })
+export async function currentUser() {
+  // Check revocation upstream on every protected request, bypassing the signed cache.
+  const { data: session, error } = await getAuth().getSession({ query: { disableCookieCache: 'true' } })
+  if (error && error.status >= 500) throw new HttpError(503, 'Authentication unavailable. Please retry.')
+  if (error || !session?.user) throw new HttpError(401, 'Sign in to CycleWorth')
+  const user = session.user
+  // An unverified signup must never claim a migrated user's history.
+  if (!user.emailVerified) throw new HttpError(403, 'Verify your email before accessing CycleWorth')
+  const email = user.email.toLowerCase()
+  const db = await connect()
+  try {
+    const result = await db.query(`select * from personal_cycleworth.resolve_identity($1,$2)`, [user.id,email])
+    if (!result.rows[0]) throw new HttpError(403, 'Identity mapping requires review')
+    return result.rows[0] as {id: string; email: string}
+  } finally { db.release() }
 }
-
-/**
- * 在服务端校验 Supabase 会话。
- *
- * 之前 API 路由直接信任客户端传来的 `userId`，这会导致越权（IDOR）：
- * 任何登录用户只要猜到/知道别人的 userId，就能操作/覆盖别人的数据。
- *
- * 现在要求客户端在请求中带上自己的 accessToken，由服务端调用 Supabase
- * 校验该 token，并返回对应的真实 user id，从而完全忽略客户端声称的 userId。
- *
- * @param accessToken 客户端 session 的 access_token（必填）
- * @returns 校验通过时返回真实 user id，否则返回 null
- */
-export async function verifySession(accessToken?: string): Promise<string | null> {
-  if (!accessToken) return null
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 'placeholder-publishable-key'
-  const supabase = createClient(supabaseUrl, supabaseKey, {
-    db: { schema: 'personal_cycleworth' },
-  })
-
-  const { data, error } = await supabase.auth.getUser(accessToken)
-  if (error || !data.user) return null
-  return data.user.id
+export async function verifySession(_token?: string) {
+  try { return (await currentUser()).id } catch (error) { if (error instanceof HttpError && error.status === 401) return null; throw error }
 }

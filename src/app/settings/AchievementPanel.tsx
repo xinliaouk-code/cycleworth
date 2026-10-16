@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Award, CheckCircle2, LockKeyhole, Trophy } from 'lucide-react'
 import type { Lang } from '../dashboard/_lib/i18n'
-import { supabase } from '../../lib/supabase'
+import { dataClient } from '../../lib/data-client'
 import { demoRides } from '../demo/mock-data'
 import { calculateROI, type Ride } from '../dashboard/_lib/utils'
 import type { TfLFareSettings } from '../../lib/tfl/fares'
@@ -14,7 +14,7 @@ export function AchievementPanel({ lang, settings }: { lang: Lang; settings: TfL
   const [rides, setRides] = useState<Ride[]>(demoRides)
   const [bikePrice, setBikePrice] = useState('0')
 
-  useEffect(() => { const load = async () => { const { data: { session } } = await supabase.auth.getSession(); if (!session?.user) return; const [{ data: saved }, { data: savedRides }] = await Promise.all([supabase.from('settings').select('bike_price').eq('id', session.user.id).maybeSingle(), supabase.from('rides').select('*').eq('user_id', session.user.id)]); if (saved?.bike_price != null) setBikePrice(String(saved.bike_price)); if (savedRides) setRides(savedRides as Ride[]) }; void load() }, [])
+  useEffect(() => { const load = async () => { const { data: { session } } = await dataClient.auth.getSession(); if (!session?.user) return; const [{ data: saved }, { data: savedRides }] = await Promise.all([dataClient.from('settings').select('bike_price').eq('id', session.user.id).maybeSingle(), dataClient.from('rides').select('*').eq('user_id', session.user.id)]); if (saved?.bike_price != null) setBikePrice(String(saved.bike_price)); if (savedRides) setRides(savedRides as Ride[]) }; void load() }, [])
 
   const achievements = useMemo<Achievement[]>(() => {
     const distance = rides.reduce((sum, ride) => sum + (Number(ride.distance) || 0), 0) / 1000

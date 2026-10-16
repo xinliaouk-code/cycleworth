@@ -1,0 +1,91 @@
+{
+  "synthetic": true,
+  "base": "http://localhost:3004",
+  "results": [
+    {
+      "name": "Unauthenticated data denied",
+      "passed": true
+    },
+    {
+      "name": "Neon email signup 0",
+      "passed": true
+    },
+    {
+      "name": "Unverified identity cannot access history 0",
+      "passed": true
+    },
+    {
+      "name": "Neon email login 0",
+      "passed": true
+    },
+    {
+      "name": "Verified identity mapped 0",
+      "passed": true
+    },
+    {
+      "name": "Neon email signup 1",
+      "passed": true
+    },
+    {
+      "name": "Unverified identity cannot access history 1",
+      "passed": true
+    },
+    {
+      "name": "Neon email login 1",
+      "passed": true
+    },
+    {
+      "name": "Verified identity mapped 1",
+      "passed": true
+    },
+    {
+      "name": "Cross-user data filter denied",
+      "passed": true
+    },
+    {
+      "name": "Dedicated credential issued",
+      "passed": true
+    },
+    {
+      "name": "Hosted Health import writes one",
+      "passed": true
+    },
+    {
+      "name": "Hosted duplicate is idempotent",
+      "passed": true
+    },
+    {
+      "name": "GPS and metrics persist",
+      "passed": true
+    },
+    {
+      "name": "Other user cannot see ride",
+      "passed": true
+    },
+    {
+      "name": "Sync status matches persisted import",
+      "passed": true
+    },
+    {
+      "name": "No stored credential disclosure",
+      "passed": true
+    },
+    {
+      "name": "Revocation blocks old credential",
+      "passed": true
+    },
+    {
+      "name": "Signed-out session denied",
+      "passed": true
+    },
+    {
+      "name": "Wrong password denied",
+      "passed": true
+    },
+    {
+      "name": "Password reset request API",
+      "status": 200,
+      "mailboxDeliveryVerified": false
+    }
+  ]
+}

@@ -12,12 +12,12 @@ function readMessage(error: unknown) {
   return typeof candidate.message === 'string' ? candidate.message : ''
 }
 
-/** Convert common Supabase Auth responses into actionable Chinese copy. */
+/** Convert common Neon Auth responses into actionable Chinese copy. */
 export function getAuthErrorMessage(error: unknown) {
   const message = readMessage(error)
   const normalized = message.toLowerCase()
 
-  if (normalized.includes('invalid login credentials') || normalized.includes('invalid_credentials')) {
+  if (normalized.includes('invalid login credentials') || normalized.includes('invalid_credentials') || normalized.includes('invalid email or password')) {
     return '邮箱或密码不正确。如果你刚注册，请先打开确认邮件；也可以使用“忘记密码”重设密码。'
   }
 
@@ -30,7 +30,7 @@ export function getAuthErrorMessage(error: unknown) {
   }
 
   if (normalized.includes('password should be at least')) {
-    return '密码至少需要 6 个字符。'
+    return '密码至少需要 8 个字符。'
   }
 
   if (normalized.includes('rate limit')) {
@@ -38,7 +38,7 @@ export function getAuthErrorMessage(error: unknown) {
   }
 
   if (normalized.includes('failed to fetch') || normalized.includes('networkerror')) {
-    return '无法连接到认证服务，请检查部署中的 Supabase URL 和 Publishable/Anon Key 环境变量。'
+    return '无法连接到认证服务，请稍后重试。'
   }
 
   return message || '登录失败，请检查网络后重试。'

@@ -8,7 +8,7 @@ export default function HomePage() {
           CycleWorth 🚲
         </h1>
         <p className="text-base md:text-lg text-slate-500">
-          Every ride has value. 同步你的 Strava 骑行记录，追踪通勤数据，计算你省下的每一笔交通开支。
+          Every ride has value. 同步你的 Apple Health 骑行记录，追踪通勤数据，计算你省下的每一笔交通开支。
         </p>
         <div className="pt-6">
           <Link 

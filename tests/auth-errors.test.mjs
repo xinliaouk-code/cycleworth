@@ -9,16 +9,16 @@ test('explains invalid login credentials as an email confirmation or password is
   )
 })
 
-test('keeps useful Supabase auth errors visible', () => {
+test('keeps useful Neon auth errors visible', () => {
   assert.equal(
     getAuthErrorMessage({ message: 'User already registered' }),
     '该邮箱已经注册，请直接登录或使用“忘记密码”重设密码。',
   )
 })
 
-test('explains a missing local Supabase configuration', () => {
+test('explains a missing local Neon configuration', () => {
   assert.equal(
     getAuthErrorMessage(new TypeError('Failed to fetch')),
-    '无法连接到认证服务，请检查部署中的 Supabase URL 和 Publishable/Anon Key 环境变量。',
+    '无法连接到认证服务，请稍后重试。',
   )
 })

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useLanguage } from '../../components/LanguageProvider'
-import { supabase } from '../../lib/supabase'
+import { dataClient } from '../../lib/data-client'
 import { defaultMaintenanceTasks, maintenanceName, maintenanceProgress, maintenanceProgressColor, maintenanceStatusText, type MaintenanceTask } from '../../lib/maintenance'
 import { demoMaintenanceTasks, demoRides } from '../demo/mock-data'
 
@@ -26,19 +26,19 @@ export default function MaintenancePage() {
   }
 
   const load = async (id: string) => {
-    const { data: rides } = await supabase.from('rides').select('distance').eq('user_id', id)
-    const totalKm = (rides ?? []).reduce((sum, ride) => sum + (Number(ride.distance) || 0), 0) / 1000
+    const { data: rides } = await dataClient.from('rides').select('distance').eq('user_id', id)
+    const totalKm = (rides ?? []).reduce((sum: number, ride: {distance: number}) => sum + (Number(ride.distance) || 0), 0) / 1000
     setOdometerKm(totalKm)
-    await supabase.from('bike_maintenance_tasks').upsert(defaultMaintenanceTasks.map(([task_type, display_name, distance_interval_km, time_interval_days]) => ({ user_id: id, task_type, display_name, distance_interval_km, time_interval_days, last_completed_odometer_km: totalKm })), { onConflict: 'user_id,task_type', ignoreDuplicates: true })
+    await dataClient.from('bike_maintenance_tasks').upsert(defaultMaintenanceTasks.map(([task_type, display_name, distance_interval_km, time_interval_days]) => ({ user_id: id, task_type, display_name, distance_interval_km, time_interval_days, last_completed_odometer_km: totalKm })), { onConflict: 'user_id,task_type', ignoreDuplicates: true })
     const [{ data: taskRows }, { data: historyRows }] = await Promise.all([
-      supabase.from('bike_maintenance_tasks').select('*').eq('user_id', id).order('display_name'),
-      supabase.from('bike_maintenance_history').select('id,completed_at,odometer_km,cost,notes,bike_maintenance_tasks(display_name,task_type)').eq('user_id', id).order('completed_at', { ascending: false }),
+      dataClient.from('bike_maintenance_tasks').select('*').eq('user_id', id).order('display_name'),
+      dataClient.from('bike_maintenance_history').select('id,completed_at,odometer_km,cost,notes,bike_maintenance_tasks(display_name,task_type)').eq('user_id', id).order('completed_at', { ascending: false }),
     ])
     setTasks((taskRows ?? []) as MaintenanceTask[]); setHistory((historyRows ?? []) as HistoryEvent[])
   }
 
   useEffect(() => { 
-    supabase.auth.getSession().then(({ data: { session } }) => { 
+    dataClient.auth.getSession().then(({ data: { session } }) => { 
       if (!session?.user) { 
         setIsDemo(true)
         const demoKm = demoRides.reduce((sum, r) => sum + (r.distance || 0), 0) / 1000
@@ -63,8 +63,8 @@ export default function MaintenancePage() {
       setTasks(curr => curr.map(t => t.id === task.id ? { ...t, last_completed_at: new Date().toISOString(), last_completed_odometer_km: odometerKm } : t))
       return
     }
-    await supabase.from('bike_maintenance_history').insert({ task_id: task.id, user_id: userId, odometer_km: odometerKm, cost: cost ? Number(cost) : null, notes: notes || null }); 
-    await supabase.from('bike_maintenance_tasks').update({ last_completed_at: new Date().toISOString(), last_completed_odometer_km: odometerKm }).eq('id', task.id); 
+    await dataClient.from('bike_maintenance_history').insert({ task_id: task.id, user_id: userId, odometer_km: odometerKm, cost: cost ? Number(cost) : null, notes: notes || null }); 
+    await dataClient.from('bike_maintenance_tasks').update({ last_completed_at: new Date().toISOString(), last_completed_odometer_km: odometerKm }).eq('id', task.id); 
     load(userId) 
   }
 
@@ -77,7 +77,7 @@ export default function MaintenancePage() {
       setTasks(curr => curr.map(t => t.id === task.id ? { ...t, distance_interval_km: km.trim() ? Number(km) : null, time_interval_days: days.trim() ? Number(days) : null } : t))
       return
     }
-    await supabase.from('bike_maintenance_tasks').update({ distance_interval_km: km.trim() ? Number(km) : null, time_interval_days: days.trim() ? Number(days) : null }).eq('id', task.id); 
+    await dataClient.from('bike_maintenance_tasks').update({ distance_interval_km: km.trim() ? Number(km) : null, time_interval_days: days.trim() ? Number(days) : null }).eq('id', task.id); 
     load(userId) 
   }
 
@@ -86,7 +86,7 @@ export default function MaintenancePage() {
       setTasks(curr => curr.map(t => t.id === task.id ? { ...t, active: !t.active } : t))
       return
     }
-    await supabase.from('bike_maintenance_tasks').update({ active: !task.active }).eq('id', task.id); 
+    await dataClient.from('bike_maintenance_tasks').update({ active: !task.active }).eq('id', task.id); 
     load(userId) 
   }
 

@@ -1,0 +1,41 @@
+
+> cycleworth@0.1.0 build
+> next build --webpack
+
+▲ Next.js 16.3.0 (webpack)
+✓ Running next.config.ts took 9ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 1191ms
+  Running TypeScript ...
+  Finished TypeScript in 686ms ...
+  Collecting page data using 11 workers ...
+  Generating static pages using 11 workers (0/18) ...
+  Generating static pages using 11 workers (4/18)
+  Generating static pages using 11 workers (8/18)
+  Generating static pages using 11 workers (13/18)
+✓ Generating static pages using 11 workers (18/18) in 1398ms
+  Finalizing page optimization ...
+  Collecting build traces ...
+
+Route (app)                  Revalidate  Expire
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/health/credentials
+├ ƒ /api/health/import
+├ ƒ /api/health/sync
+├ ○ /api/ride-advice                30m      1y
+├ ƒ /api/strava/callback
+├ ƒ /api/strava/exchange
+├ ƒ /api/strava/sync
+├ ○ /dashboard
+├ ○ /demo
+├ ○ /login
+├ ○ /maintenance
+├ ○ /settings
+├ ○ /settings/health
+└ ○ /settings/layout
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand

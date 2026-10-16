@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { Wrench, ChevronDown, ChevronUp, CheckCircle, ArrowRight } from 'lucide-react'
 import { useLanguage } from '../../../components/LanguageProvider'
-import { supabase } from '../../../lib/supabase'
+import { dataClient } from '../../../lib/data-client'
 import { defaultMaintenanceTasks, maintenanceName, maintenanceProgress, maintenanceProgressColor, maintenanceStatusText, type MaintenanceTask } from '../../../lib/maintenance'
 import { dashboardCardClass, dashboardCollapseButtonClass } from '../_lib/module-ui'
 
@@ -24,13 +24,13 @@ export function MaintenanceCard({ userId, odometerKm, demoTasks, onDemoCta }: Pr
   const load = async () => {
     if (demoTasks) { setTasks(demoTasks); return }
     if (!userId) return
-    await supabase.from('bike_maintenance_tasks').upsert(
+    await dataClient.from('bike_maintenance_tasks').upsert(
       defaultMaintenanceTasks.map(([task_type, display_name, distance_interval_km, time_interval_days]) => ({
         user_id: userId, task_type, display_name, distance_interval_km, time_interval_days, last_completed_odometer_km: odometerKm
       })),
       { onConflict: 'user_id,task_type', ignoreDuplicates: true }
     )
-    const { data } = await supabase.from('bike_maintenance_tasks').select('*').eq('user_id', userId).eq('active', true)
+    const { data } = await dataClient.from('bike_maintenance_tasks').select('*').eq('user_id', userId).eq('active', true)
     setTasks((data ?? []) as MaintenanceTask[])
   }
 
@@ -49,14 +49,14 @@ export function MaintenanceCard({ userId, odometerKm, demoTasks, onDemoCta }: Pr
     const cost = window.prompt(text.cost)
     const notes = window.prompt(text.notes)
     setBusy(true)
-    await supabase.from('bike_maintenance_history').insert({
+    await dataClient.from('bike_maintenance_history').insert({
       task_id: urgent.id,
       user_id: userId,
       odometer_km: odometerKm,
       cost: cost ? Number(cost) : null,
       notes: notes || null
     })
-    await supabase.from('bike_maintenance_tasks').update({
+    await dataClient.from('bike_maintenance_tasks').update({
       last_completed_at: new Date().toISOString(),
       last_completed_odometer_km: odometerKm
     }).eq('id', urgent.id)

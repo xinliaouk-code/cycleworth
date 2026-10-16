@@ -1,10 +1,26 @@
 'use client'
 
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useSyncExternalStore } from 'react'
 import { copy, type Lang } from '../app/dashboard/_lib/i18n'
 
 type LanguageContextValue = { lang: Lang; setLang: (lang: Lang) => void; t: (typeof copy)[Lang] }
 const LanguageContext = createContext<LanguageContextValue | null>(null)
+
+function subscribeLanguage(onChange: () => void) {
+  window.addEventListener('storage', onChange)
+  window.addEventListener('cw-language-change', onChange)
+  return () => {
+    window.removeEventListener('storage', onChange)
+    window.removeEventListener('cw-language-change', onChange)
+  }
+}
+
+function savedLanguage(): Lang {
+  return localStorage.getItem('cw_language') === 'zh' ? 'zh' : 'en'
+}
+
+// Match the server snapshot during hydration, then read the browser preference.
+function serverLanguage(): Lang { return 'en' }
 
 function decodeCopy(source: (typeof copy)[Lang]) {
   return Object.fromEntries(
@@ -16,15 +32,11 @@ function decodeCopy(source: (typeof copy)[Lang]) {
 }
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLangState] = useState<Lang>(() => {
-    if (typeof window === 'undefined') return 'en'
-    const saved = localStorage.getItem('cw_language')
-    return saved === 'zh' ? 'zh' : 'en'
-  })
+  const lang = useSyncExternalStore(subscribeLanguage, savedLanguage, serverLanguage)
   const setLang = (next: Lang) => {
-    setLangState(next)
     localStorage.setItem('cw_language', next)
     document.documentElement.lang = next === 'zh' ? 'zh-CN' : 'en'
+    window.dispatchEvent(new Event('cw-language-change'))
   }
   return <LanguageContext.Provider value={{ lang, setLang, t: decodeCopy(copy[lang]) }}>{children}</LanguageContext.Provider>
 }

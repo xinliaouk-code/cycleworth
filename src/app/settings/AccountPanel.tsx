@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { LogOut, LogIn, UserRound } from 'lucide-react'
-import { supabase } from '../../lib/supabase'
+import { dataClient } from '../../lib/data-client'
 
 export function AccountPanel({ lang }: { lang: 'en' | 'zh' }) {
   const [account, setAccount] = useState<{ name: string; email: string } | null>(null)
@@ -12,19 +12,17 @@ export function AccountPanel({ lang }: { lang: 'en' | 'zh' }) {
 
   useEffect(() => {
     const loadAccount = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
+      const { data: { session } } = await dataClient.auth.getSession()
       const user = session?.user
       if (!user) return
-      const metadata = user.user_metadata as Record<string, unknown>
-      const name = [metadata.full_name, metadata.name, metadata.user_name].find(value => typeof value === 'string' && value.trim()) as string | undefined
-      setAccount({ name: name ?? user.email?.split('@')[0] ?? 'CycleWorth rider', email: user.email ?? '' })
+      setAccount({ name: user.email?.split('@')[0] ?? 'CycleWorth rider', email: user.email ?? '' })
     }
-    void loadAccount()
+    void loadAccount().catch(() => {})
   }, [])
 
   const logout = async () => {
     setLoggingOut(true)
-    await supabase.auth.signOut()
+    await dataClient.auth.signOut()
     window.location.assign('/login')
   }
 

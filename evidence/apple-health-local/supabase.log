@@ -1,0 +1,12 @@
+
+> cycleworth@0.1.0 supabase
+> npm run supabase:verify
+
+
+> cycleworth@0.1.0 supabase:verify
+> node scripts/verify-supabase-isolation.mjs
+
+CycleWorth Supabase isolation scan: 58 source files, 4 active migration(s)
+WARN: no local Supabase CLI project link is present; exact dedicated target is still pending
+PASS: runtime key model, schema scope, migration safety, and historical archive checks passed
+PENDING: dedicated Supabase project identity is required before remote migration or production cutover
