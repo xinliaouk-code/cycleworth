@@ -1,122 +1,52 @@
 'use client'
-
-import { useEffect, useRef } from 'react'
+import {useEffect,useRef,useState} from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
-interface MapHoverProps {
-  polyline: string
-}
-
-// Google Polyline 解码函数
-function decodePolyline(encoded: string): [number, number][] {
-  const points: [number, number][] = []
-  let index = 0
-  const len = encoded.length
-  let lat = 0, lng = 0
-  while (index < len) {
-    let b, shift = 0, result = 0
-    do {
-      b = encoded.charCodeAt(index++) - 63
-      result |= (b & 0x1f) << shift
-      shift += 5
-    } while (b >= 0x20)
-    const dlat = ((result & 1) ? ~(result >> 1) : (result >> 1))
-    lat += dlat
-    shift = 0
-    result = 0
-    do {
-      b = encoded.charCodeAt(index++) - 63
-      result |= (b & 0x1f) << shift
-      shift += 5
-    } while (b >= 0x20)
-    const dlng = ((result & 1) ? ~(result >> 1) : (result >> 1))
-    lng += dlng
-    points.push([lat / 1e5, lng / 1e5])
-  }
+// Bounds checks prevent a truncated legacy polyline from creating invalid map bounds.
+function decodePolyline(encoded:string):[number,number][]{
+ const points:[number,number][]=[]
+ let index=0,lat=0,lng=0
+ function delta(){
+  let shift=0,result=0,b=0
+  do{
+   if(index>=encoded.length || shift>30)throw new Error('Invalid route')
+   b=encoded.charCodeAt(index++)-63
+   if(b<0||b>63)throw new Error('Invalid route')
+   result|=(b&31)<<shift;shift+=5
+  }while(b>=32)
+  return result&1?~(result>>1):result>>1
+ }
+ try{
+  while(index<encoded.length){lat+=delta();lng+=delta();if(Math.abs(lat)>9000000||Math.abs(lng)>18000000)return [];points.push([lat/1e5,lng/1e5])}
   return points
+ }catch{return []}
 }
-
-export default function MapHover({ polyline }: MapHoverProps) {
-  const mapContainerRef = useRef<HTMLDivElement>(null)
-  const mapInstanceRef = useRef<L.Map | null>(null)
-
-  useEffect(() => {
-    if (!mapContainerRef.current || !polyline) return
-
-    // 初始化地图实例
-    if (!mapInstanceRef.current) {
-      const map = L.map(mapContainerRef.current, {
-        zoomControl: false,
-        attributionControl: false,
-        dragging: false,
-        scrollWheelZoom: false,
-        doubleClickZoom: false,
-        boxZoom: false,
-        keyboard: false,
-      })
-
-      // 加载高颜值精美浅色地图底图 (CartoDB Voyager)
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        maxZoom: 19,
-        subdomains: 'abcd',
-      }).addTo(map)
-
-      mapInstanceRef.current = map
-    }
-
-    const map = mapInstanceRef.current
-    const coords = decodePolyline(polyline)
-
-    if (coords.length > 0) {
-      // 清理旧的轨迹图层
-      map.eachLayer((layer) => {
-        if (layer instanceof L.Polyline) {
-          map.removeLayer(layer)
-        }
-      })
-
-      // 绘制骑行轨迹路线
-      const polylineLayer = L.polyline(coords, {
-        color: '#0284c7', // 天蓝色
-        weight: 4.5,
-        opacity: 0.9,
-      }).addTo(map)
-
-      // 自动缩放并居中适配路线
-      map.fitBounds(polylineLayer.getBounds(), { padding: [15, 15] })
-    }
-
-    setTimeout(() => {
-      map.invalidateSize()
-    }, 50)
-
-  }, [polyline])
-
-  // 组件卸载时销毁地图
-  useEffect(() => {
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove()
-        mapInstanceRef.current = null
-      }
-    }
-  }, [])
-
-// src/components/RideMap.tsx
-// ... 前面的逻辑保持不变 ...
-
-  if (!polyline) {
-    return <div className="text-xs text-slate-400 flex items-center justify-center h-48 bg-slate-100 rounded-2xl">暂无轨迹数据</div>
-  }
-
-  return (
-    // 关键点：这里必须是 w-full h-full，让它完全听从父容器的尺寸裁切
-    <div className="w-full h-full rounded-2xl overflow-hidden shadow-sm border border-slate-200 bg-white relative">
-      <div ref={mapContainerRef} className="w-full h-full" />
-      <div className="absolute top-2 left-2 bg-white/90 backdrop-blur px-2 py-0.5 rounded-lg text-[10px] font-semibold text-slate-700 shadow-sm z-[1000] border border-slate-100">
-        🗺️ 真实路线地图
-      </div>
-    </div>
-  )
+export default function RideMap({polyline}:{polyline:string|null}){
+ const container=useRef<HTMLDivElement>(null)
+ const [tileError,setTileError]=useState(false)
+ const coords=decodePolyline(polyline??'')
+ const valid=coords.length>1
+ useEffect(()=>{
+  if(!container.current || !valid)return
+  const points=decodePolyline(polyline??'')
+  let disposed=false
+  const map=L.map(container.current,{zoomControl:false,attributionControl:true,dragging:false,scrollWheelZoom:false,doubleClickZoom:false,boxZoom:false,keyboard:false})
+  // Standard OSM endpoint: normal browser caching and Referer, visible attribution,
+  // viewport tiles only. CARTO now returns API-key-required placeholder images.
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
+   maxZoom:19,keepBuffer:0,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  }).on('tileerror',()=>{if(!disposed)setTileError(true)}).addTo(map)
+  const route=L.polyline(points,{color:'#0284c7',weight:4.5,opacity:0.9}).addTo(map)
+  const fit=()=>{if(!disposed){map.invalidateSize();map.fitBounds(route.getBounds(),{padding:[20,20],maxZoom:16,animate:false})}}
+  const observer=new ResizeObserver(fit);observer.observe(container.current)
+  const frame=requestAnimationFrame(()=>{setTileError(false);fit()})
+  return()=>{disposed=true;cancelAnimationFrame(frame);observer.disconnect();map.remove()}
+ },[polyline,valid])
+ if(!valid)return <div className="flex h-full min-h-32 items-center justify-center rounded-2xl bg-slate-100 p-4 text-xs text-slate-500">暂无可用轨迹 · No route data</div>
+ return <div className="relative h-full w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+  <div ref={container} className="h-full w-full" aria-label="Ride route map"/>
+  <div className="pointer-events-none absolute left-2 top-2 z-[1000] rounded-lg border border-slate-100 bg-white/90 px-2 py-1 text-[10px] font-semibold text-slate-700 shadow-sm">🗺️ 骑行路线 · Ride route</div>
+  {tileError&&<p role="status" className="absolute bottom-6 left-2 right-2 z-[1000] rounded-lg bg-white/95 p-2 text-[10px] text-amber-800">底图暂时不可用，路线仍保留 · Map tiles unavailable; route retained.</p>}
+ </div>
 }
