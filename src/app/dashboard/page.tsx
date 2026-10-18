@@ -268,7 +268,7 @@ function DashboardContent() {
             <Link
               href="/settings/layout"
               title={lang === 'zh' ? '自定义布局' : 'Layout'}
-              className="soft-control flex h-11 w-11 items-center justify-center rounded-xl border text-slate-600 shadow-2xs active:scale-95 transition"
+              className="soft-control hidden sm:flex h-11 w-11 items-center justify-center rounded-xl border text-slate-600 shadow-2xs active:scale-95 transition"
             >
               <SlidersHorizontal className="h-4 w-4" />
             </Link>
@@ -284,15 +284,15 @@ function DashboardContent() {
         </header>
 
         {isDemoMode && (
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 rounded-2xl border border-sky-200/80 bg-gradient-to-r from-sky-50 via-indigo-50/50 to-emerald-50/60 p-3.5 px-4 text-xs shadow-2xs">
+          <div className="flex items-center justify-between gap-2.5 rounded-2xl border border-sky-200/80 bg-gradient-to-r from-sky-50 via-indigo-50/50 to-emerald-50/60 p-3.5 px-4 text-xs shadow-2xs">
             <div className="flex items-center gap-2.5 font-medium text-slate-800">
               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-sky-600 text-white font-black text-[11px] shadow-xs">
                 ⚡
               </span>
               <span>
                 {lang === 'zh'
-                  ? '演示数据 · 登录后查看自己的骑行'
-                  : 'Demo data · Sign in for your own rides'}
+                  ? '演示数据'
+                  : 'Demo data'}
               </span>
             </div>
             <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
@@ -305,7 +305,7 @@ function DashboardContent() {
                   setCollapseSettings(!allCollapsed)
                   setCollapseSync(!allCollapsed)
                 }}
-                className="font-bold text-slate-700 bg-white/90 hover:bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs transition active:scale-95 text-[11px]"
+                className="hidden sm:inline-flex font-bold text-slate-700 bg-white/90 hover:bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs transition active:scale-95 text-[11px]"
               >
                 {collapseRides && collapseRoi ? (lang === 'zh' ? '展开全部模块' : 'Expand All') : (lang === 'zh' ? '收起全部模块' : 'Collapse All')}
               </button>
@@ -313,14 +313,14 @@ function DashboardContent() {
                 href="/login"
                 className="font-bold text-sky-700 hover:text-sky-800 bg-white/90 hover:bg-white px-3 py-1 rounded-lg border border-sky-200/80 shadow-2xs transition active:scale-95"
               >
-                {lang === 'zh' ? '登录并导入骑行 →' : 'Sign in & import rides →'}
+                {lang === 'zh' ? '登录导入骑行 →' : 'Sign in →'}
               </Link>
             </div>
           </div>
         )}
 
         <div className="flex items-start justify-between gap-4 px-1">
-          <div><p className="text-xs font-medium uppercase tracking-widest text-emerald-700">{lang === 'zh' ? '骑行生活' : 'Your cycling life'}</p><h2 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">{navigationLabels[view as NavigationId][lang]}</h2><p className="mt-2 text-sm text-slate-500">{({ overview: { zh: '每一次出发，都有所收获。', en: 'Every ride adds up.' }, rides: { zh: '记录每段路，回看每次出发。', en: 'Every journey, in one place.' }, bike: { zh: '了解爱车的价值，照顾它的状态。', en: 'Keep your bike in good shape.' }, trends: { zh: '让坚持可见。', en: 'See your consistency take shape.' } }[view] ?? { zh: '', en: '' })[lang]}</p></div>
+          <div><p className="hidden sm:block text-xs font-medium uppercase tracking-widest text-emerald-700">{lang === 'zh' ? '骑行生活' : 'Your cycling life'}</p><h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:mt-1 sm:text-3xl">{navigationLabels[view as NavigationId][lang]}</h2><p className="mt-2 hidden text-sm text-slate-500 sm:block">{({ overview: { zh: '每一次出发，都有所收获。', en: 'Every ride adds up.' }, rides: { zh: '记录每段路，回看每次出发。', en: 'Every journey, in one place.' }, bike: { zh: '了解爱车的价值，照顾它的状态。', en: 'Keep your bike in good shape.' }, trends: { zh: '让坚持可见。', en: 'See your consistency take shape.' } }[view] ?? { zh: '', en: '' })[lang]}</p></div>
           <details className="relative shrink-0"><summary className="cursor-pointer rounded-xl border border-slate-200 bg-white/80 px-3 py-3 text-xs font-semibold text-slate-600">{lang === 'zh' ? '全部功能' : 'Explore'}</summary><div className="absolute right-0 top-full z-30 mt-2 grid w-44 gap-1 rounded-2xl border border-slate-100 bg-white p-2 shadow-xl">{navigationIds.map(id => <Link key={id} href={navigationHref(id, search.get('demo') === 'true')} onClick={event => { event.currentTarget.closest('details')?.removeAttribute('open') }} className="rounded-xl px-3 py-3 text-sm hover:bg-emerald-50">{navigationLabels[id][lang]}</Link>)}</div></details>
         </div>
         {viewSections[view].every(id => dashboardLayout.hidden.includes(id)) && <p className="rounded-2xl bg-white p-5 text-sm text-slate-600">{lang === 'zh' ? '此页的模块已在布局设置中隐藏。' : 'This page’s modules are hidden in layout settings.'} <Link className="underline" href="/settings/layout">{lang === 'zh' ? '调整布局' : 'Edit layout'}</Link></p>}

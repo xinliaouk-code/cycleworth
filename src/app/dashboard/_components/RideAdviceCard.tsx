@@ -1,13 +1,12 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useId, useState } from 'react'
 import {
   CloudRain,
   Wind,
   Thermometer,
   Sunset,
   Leaf,
-  Sun,
   ChevronDown,
   ChevronUp,
   RefreshCw,
@@ -16,7 +15,7 @@ import {
   XCircle,
 } from 'lucide-react'
 import { useLanguage } from '../../../components/LanguageProvider'
-import { dashboardCardClass, dashboardCardTitleClass, dashboardCollapseButtonClass, moduleText } from '../_lib/module-ui'
+import { dashboardCardClass, dashboardCollapseButtonClass, moduleText } from '../_lib/module-ui'
 
 type Advice = {
   temperature: number
@@ -33,6 +32,7 @@ const direction = (degree: number) => ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW
 export function RideAdviceCard({ initialData }: { initialData?: Advice } = {}) {
   const { lang, t } = useLanguage()
   const ui = moduleText(lang)
+  const detailsId = useId()
   const [data, setData] = useState<Advice | null>(initialData ?? null)
   const [collapsed, setCollapsed] = useState(false)
   const [failed, setFailed] = useState(false)
@@ -118,20 +118,18 @@ export function RideAdviceCard({ initialData }: { initialData?: Advice } = {}) {
   const verdict = bad ? ui.notRecommended : cautious ? ui.consider : ui.recommended
 
   const reason = bad
-    ? lang === 'zh'
-      ? data.raining || data.rainProbability >= 65
-        ? '降雨风险较高，今天更适合选择其他出行方式。'
-        : data.windSpeed >= 35
-          ? '风力较强，骑行舒适度与安全性会受影响。'
-          : '空气质量一般，建议减少长时间户外骑行。'
-      : 'Conditions are less suitable for cycling today.'
+    ? data.raining || data.rainProbability >= 65
+      ? (lang === 'zh' ? '降雨概率较高，建议换一种出行方式。' : 'Rain likely. Consider another way to travel.')
+      : data.windSpeed >= 35
+        ? (lang === 'zh' ? '大风天气，建议减少骑行。' : 'Strong winds. Consider skipping the ride.')
+        : (lang === 'zh' ? '空气质量较差，建议减少户外骑行。' : 'Poor air quality. Limit outdoor riding.')
     : cautious
-      ? lang === 'zh'
-        ? `无明显降雨，但有${data.windSpeed >= 22 ? '较强风力' : '轻微天气因素'}，请按体感决定。`
-        : 'No major rain, but conditions need a little care.'
-      : lang === 'zh'
-        ? `无降雨，${data.windSpeed < 15 ? '风力轻微' : '风力适中'}，空气质量良好。`
-        : 'No rain, manageable wind and good air quality.'
+      ? data.windSpeed >= 22
+        ? (lang === 'zh' ? '风力偏强，注意侧风。' : 'Breezy conditions. Watch for crosswinds.')
+        : data.aqi > 40
+          ? (lang === 'zh' ? '空气一般，按体感安排骑行。' : 'Moderate air quality. Adjust your ride.')
+          : (lang === 'zh' ? '可能有雨，出门前再看天气。' : 'Rain possible. Check before heading out.')
+      : (lang === 'zh' ? '天气适合骑行，按体感增减衣物。' : 'Good riding conditions. Dress for comfort.')
 
   const sunset = new Date(data.sunset).toLocaleTimeString(lang === 'zh' ? 'zh-CN' : 'en-GB', {
     hour: '2-digit',
@@ -161,82 +159,54 @@ export function RideAdviceCard({ initialData }: { initialData?: Advice } = {}) {
           icon: CheckCircle2,
         }
 
+  const statusLabel = lang === 'zh' ? verdict : bad ? 'Avoid today' : cautious ? 'Take care' : 'Good to ride'
   const StatusIcon = cardTheme.icon
+  const gear = [
+    data.temperature < 15 ? (lang === 'zh' ? '防风长袖' : 'Long sleeves') : (lang === 'zh' ? '短袖' : 'Short sleeves'),
+    ...(data.rainProbability > 30 || data.raining ? [lang === 'zh' ? '雨衣' : 'Raincoat'] : []),
+    lang === 'zh' ? '骑行眼镜' : 'Glasses',
+    lang === 'zh' ? '头盔/车灯' : 'Helmet + lights',
+  ]
 
   return (
-    <section className={`${dashboardCardClass} ${cardTheme.bg}`}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-2.5">
-          <button
-            onClick={() => setCollapsed(v => !v)}
-            title={collapsed ? t.expand : t.collapse}
-            className={`${dashboardCollapseButtonClass} mt-0.5`}
-          >
-            {collapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-          </button>
-          <div className="min-w-0">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{ui.todayAdvice}</span>
-            {!collapsed && (
-              <div className="mt-1.5 space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-extrabold ${cardTheme.badge}`}>
-                    <StatusIcon className="h-3.5 w-3.5 shrink-0" />
-                    {verdict}
-                  </span>
-                </div>
-                <p className="text-xs font-medium text-slate-600 md:text-sm">{reason}</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {!collapsed && (
-          <div className="hidden shrink-0 items-center justify-center rounded-2xl bg-white p-2.5 shadow-xs border border-slate-100 sm:flex">
-            <Sun className="h-6 w-6 text-amber-500" />
-          </div>
-        )}
+    <section aria-label={ui.todayAdvice} className={`${dashboardCardClass} ${cardTheme.bg}`}>
+      <div className="flex items-center gap-2">
+        <h2 className="min-w-0 flex-1 text-xs font-semibold text-slate-600 md:text-sm">
+          {lang === 'zh' ? ui.todayAdvice : 'Ride advice'}
+        </h2>
+        <span title={verdict} aria-label={verdict} className={`inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border px-2 py-1 text-[11px] font-bold ${cardTheme.badge}`}>
+          <StatusIcon className="h-3 w-3 shrink-0" aria-hidden="true" />
+          {statusLabel}
+        </span>
+        <button
+          type="button"
+          onClick={() => setCollapsed(value => !value)}
+          aria-label={collapsed ? t.expand : t.collapse}
+          aria-expanded={!collapsed}
+          aria-controls={detailsId}
+          className={`${dashboardCollapseButtonClass} h-11! w-11! -mr-1`}
+        >
+          {collapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+        </button>
       </div>
 
       {!collapsed && (
-        <>
-          <div className="mt-4 grid grid-cols-2 gap-2 text-xs sm:grid-cols-5 md:gap-3">
-            <Metric icon={CloudRain} label={ui.rain} value={`${data.rainProbability}%`} iconColor="text-sky-500" />
-            <Metric icon={Wind} label={ui.wind} value={`${direction(data.windDirection)} ${Math.round(data.windSpeed)} km/h`} iconColor="text-teal-500" />
+        <div id={detailsId}>
+          <p className="mt-1 text-xs leading-5 text-slate-600">{reason}</p>
+          <div className="mt-2.5 grid grid-cols-3 gap-2">
             <Metric icon={Thermometer} label={ui.temperature} value={`${Math.round(data.temperature)}°C`} iconColor="text-amber-500" />
-            <Metric icon={Sunset} label={ui.sunset} value={sunset} iconColor="text-orange-500" />
-            <Metric icon={Leaf} label={ui.air} value={airText} iconColor="text-emerald-500" />
+            <Metric icon={CloudRain} label={ui.rain} value={`${data.rainProbability}%`} iconColor="text-sky-500" />
+            <Metric icon={Wind} label={`${ui.wind} ${direction(data.windDirection)}`} value={`${Math.round(data.windSpeed)} km/h`} iconColor="text-teal-500" />
           </div>
-
-          {/* Gear & Outfit Advice Chips */}
-          <div className="mt-3.5 flex flex-wrap items-center gap-2 pt-3 border-t border-slate-200/50 text-xs">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mr-1">
-              {lang === 'zh' ? '穿搭/装备小贴士:' : 'Recommended Gear:'}
-            </span>
-            {data.temperature < 15 ? (
-              <span className="inline-flex items-center gap-1 rounded-lg border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-bold text-sky-800 shadow-2xs">
-                🧥 {lang === 'zh' ? '防风夹克 / 长袖' : 'Windbreaker Jacket'}
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-800 shadow-2xs">
-                👕 {lang === 'zh' ? '短袖骑行服' : 'Short-sleeve Jersey'}
-              </span>
-            )}
-
-            {(data.rainProbability > 30 || data.raining) && (
-              <span className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-800 shadow-2xs">
-                ☔ {lang === 'zh' ? '携带雨衣' : 'Pack Rain Coat'}
-              </span>
-            )}
-
-            <span className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-800 shadow-2xs">
-              🕶️ {lang === 'zh' ? '防风骑行眼镜' : 'Riding Shades'}
-            </span>
-
-            <span className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700 shadow-2xs">
-              🪖 {lang === 'zh' ? '头盔 & 骑行灯' : 'Helmet & Bike Lights'}
-            </span>
+          <div className="mt-2.5 flex items-center gap-5 text-[11px] leading-5 text-slate-500">
+            <span className="inline-flex items-center gap-1.5"><Sunset className="h-3.5 w-3.5 text-orange-500" aria-hidden="true" />{ui.sunset}<b className="font-semibold text-slate-700">{sunset}</b></span>
+            <span className="inline-flex items-center gap-1.5"><Leaf className="h-3.5 w-3.5 text-emerald-500" aria-hidden="true" />{ui.air}<b className="font-semibold text-slate-700">{airText}</b></span>
           </div>
-        </>
+          <p className="mt-2.5 border-t border-slate-200/50 pt-2 text-[11px] leading-5 text-slate-600">
+            <span className="mr-2 font-semibold text-slate-500">{lang === 'zh' ? '装备' : 'Gear'}</span>
+            {gear.join(' · ')}
+          </p>
+        </div>
       )}
     </section>
   )
@@ -254,13 +224,11 @@ function Metric({
   iconColor: string
 }) {
   return (
-    <div className="flex items-center gap-2 rounded-xl border border-slate-100 bg-white/90 p-2.5 shadow-xs">
-      <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-50 ${iconColor}`}>
-        <Icon className="h-3.5 w-3.5" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <span className="block truncate text-[10px] font-semibold text-slate-400">{label}</span>
-        <b className="block truncate text-xs font-bold text-slate-800">{value}</b>
+    <div className="flex min-w-0 items-center gap-1.5 rounded-xl border border-slate-100 bg-white/85 px-2 py-2.5">
+      <Icon className={`h-3.5 w-3.5 shrink-0 ${iconColor}`} aria-hidden="true" />
+      <div className="min-w-0">
+        <span className="block text-[10px] leading-4 text-slate-500">{label}</span>
+        <b className="block whitespace-nowrap text-xs font-bold leading-4 text-slate-800">{value}</b>
       </div>
     </div>
   )

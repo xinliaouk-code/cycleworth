@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { Bike, Route, PiggyBank, Flame, ChevronDown, ChevronUp } from 'lucide-react'
 import { useLanguage } from '../../../components/LanguageProvider'
 import { dashboardCardClass, dashboardCardTitleClass, dashboardCollapseButtonClass, moduleText } from '../_lib/module-ui'
@@ -15,84 +15,79 @@ interface StatsGridProps {
 export function StatsGrid({ totalRides, totalDistanceKm, estimatedSavings, totalCalories }: StatsGridProps) {
   const { t, lang } = useLanguage()
   const ui = moduleText(lang)
+  const detailsId = useId()
   const [collapsed, setCollapsed] = useState(false)
 
   const items = [
     {
       label: t.totalRides,
+      shortLabel: lang === 'zh' ? '总骑行' : 'Rides',
       value: `${totalRides}`,
       unit: t.rides,
       icon: Bike,
-      iconBg: 'bg-sky-50 text-sky-600 border border-sky-100',
       valueClass: 'text-slate-900',
     },
     {
       label: t.totalDistance,
+      shortLabel: lang === 'zh' ? '总里程' : 'Distance',
       value: totalDistanceKm,
       unit: 'km',
       icon: Route,
-      iconBg: 'bg-indigo-50 text-indigo-600 border border-indigo-100',
       valueClass: 'text-slate-900',
     },
     {
       label: t.totalSavings,
+      shortLabel: lang === 'zh' ? '已节省' : 'Savings',
       value: `£${estimatedSavings}`,
       unit: '',
       icon: PiggyBank,
-      iconBg: 'bg-emerald-50 text-emerald-600 border border-emerald-100',
       valueClass: 'text-emerald-600 font-extrabold',
       accent: true,
     },
     {
       label: ui.calories,
+      shortLabel: lang === 'zh' ? '预估热量' : 'Calories',
       value: `${totalCalories.toLocaleString()}`,
       unit: 'kcal',
       icon: Flame,
-      iconBg: 'bg-amber-50 text-amber-600 border border-amber-100',
       valueClass: 'text-slate-900',
     },
   ]
 
   return (
-    <section className={dashboardCardClass}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <button
-            onClick={() => setCollapsed(v => !v)}
-            title={collapsed ? t.expand : t.collapse}
-            className={dashboardCollapseButtonClass}
-          >
-            {collapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-          </button>
-          <h2 className={dashboardCardTitleClass}>{ui.keyStats}</h2>
-        </div>
+    <section aria-label={ui.keyStats} className={dashboardCardClass}>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className={dashboardCardTitleClass}>{ui.keyStats}</h2>
+        <button type="button" onClick={() => setCollapsed(value => !value)}
+          aria-label={collapsed ? t.expand : t.collapse} aria-expanded={!collapsed} aria-controls={detailsId}
+          className={`${dashboardCollapseButtonClass} h-11! w-11! -mr-1`}>
+          {collapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+        </button>
       </div>
 
       {!collapsed && (
-        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+        <div id={detailsId} className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-3">
           {items.map((item, idx) => {
             const IconComponent = item.icon
             return (
               <div
                 key={idx}
-                className={`relative overflow-hidden rounded-xl border p-3.5 transition-all md:p-4 ${
+                className={`relative overflow-hidden rounded-xl border px-3 py-2.5 transition-all md:p-4 ${
                   item.accent
                     ? 'border-emerald-200/80 bg-gradient-to-br from-emerald-50/50 via-white to-sky-50/30 shadow-xs'
                     : 'border-slate-100 bg-slate-50/60 hover:bg-white hover:shadow-xs'
                 }`}
               >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-semibold text-slate-500">{item.label}</span>
-                  <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${item.iconBg}`}>
-                    <IconComponent className="h-4 w-4" />
-                  </div>
+                <div className="flex items-center gap-1.5 text-slate-500" title={item.label}>
+                  <IconComponent className={`h-3.5 w-3.5 shrink-0 ${item.accent ? 'text-emerald-600' : 'text-slate-400'}`} aria-hidden="true" />
+                  <span className="text-[11px] font-medium md:text-xs">{item.shortLabel}</span>
                 </div>
 
-                <div className="mt-2.5 flex items-baseline gap-1">
-                  <span className={`text-2xl font-bold tracking-tight md:text-3xl ${item.valueClass}`}>
+                <div className="mt-1 flex items-baseline gap-1">
+                  <span className={`text-xl font-bold tabular-nums tracking-tight md:text-2xl ${item.valueClass}`}>
                     {item.value}
                   </span>
-                  {item.unit && <span className="text-xs font-medium text-slate-400">{item.unit}</span>}
+                  {item.unit && <span className="text-[10px] font-medium text-slate-400 md:text-xs">{item.unit}</span>}
                 </div>
               </div>
             )
